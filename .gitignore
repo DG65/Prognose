@@ -1,0 +1,4 @@
+.DS_Store
+
+# Testtreiber / lokale Hilfsskripte — nicht Teil des Moduls
+tools/

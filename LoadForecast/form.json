@@ -1,0 +1,264 @@
+{
+    "elements": [
+        {
+            "type": "ExpansionPanel",
+            "caption": "⚙️ Allgemein",
+            "expanded": true,
+            "items": [
+                {
+                    "type": "CheckBox",
+                    "name": "LFC_Active",
+                    "caption": "Prognose aktiv"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "LFC_IntervalHours",
+                    "caption": "Neuberechnung alle … Stunden",
+                    "minimum": 1,
+                    "maximum": 24,
+                    "suffix": " h"
+                },
+                {
+                    "type": "Select",
+                    "name": "LFC_Log_Level",
+                    "caption": "Logging",
+                    "options": [
+                        { "caption": "Aus",      "value": 0 },
+                        { "caption": "Basis",    "value": 1 },
+                        { "caption": "Ausführlich","value": 2 }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "📊 Datenquellen (Archiv)",
+            "expanded": true,
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "── Hauptverbrauch (Pflicht) ─────────────────────────"
+                },
+                {
+                    "type": "SelectVariable",
+                    "name": "VAR_Consumption",
+                    "caption": "Hausverbrauch — LEISTUNG in W (muss archiviert sein)"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Tipp: z.B. die EMS-Variable 'Hausverbrauch (W)'. Für eine reine Grundlast-Prognose unten WP/Wallbox abziehen."
+                },
+                {
+                    "type": "Label",
+                    "caption": "── Abzuziehende Verbraucher (optional) ──────────────"
+                },
+                {
+                    "type": "List",
+                    "name": "ExcludeVars",
+                    "caption": "Wärmepumpe, Wallbox … (Leistung in W) werden slotweise abgezogen",
+                    "add": true,
+                    "delete": true,
+                    "columns": [
+                        {
+                            "caption": "Variable",
+                            "name": "VariableID",
+                            "width": "auto",
+                            "add": 0,
+                            "edit": { "type": "SelectVariable" }
+                        }
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "caption": "── Einflussgrößen (Historie) ────────────────────────"
+                },
+                {
+                    "type": "SelectVariable",
+                    "name": "VAR_TempHistory",
+                    "caption": "Außentemperatur (°C, archiviert)"
+                },
+                {
+                    "type": "SelectVariable",
+                    "name": "VAR_Presence",
+                    "caption": "Anwesenheit (bool/0..1, archiviert) — z.B. Geofencing"
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "🔮 Temperaturvorhersage",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "Wichtig: Es werden TAGESMITTEL erwartet (konsistent zur Historie), nicht die aktuelle Temperatur."
+                },
+                {
+                    "type": "Select",
+                    "name": "LFC_TempFcMode",
+                    "caption": "Quelle der Vorhersage",
+                    "options": [
+                        { "caption": "Auto (OpenWeatherData, sonst Klimatologie)", "value": 0 },
+                        { "caption": "Tagesmittel-Variablen",                      "value": 1 },
+                        { "caption": "Slot-Aggregation über Ident-Muster",        "value": 2 }
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "caption": "Auto: findet eine OpenWeatherData-Instanz (demel42) automatisch. Voraussetzung: dort die Stundenvorhersage aktivieren (hourly_forecast_count > 0, z.B. 40). Ohne OWM/ohne Vorhersage wird das saisonale Normal aus dem Temperatur-Archiv genutzt."
+                },
+                {
+                    "type": "Label",
+                    "caption": "── Tagesmittel-Variablen (Modus 1) ──────────────────"
+                },
+                {
+                    "type": "SelectVariable",
+                    "name": "VAR_TempFc_D0",
+                    "caption": "Tagesmittel heute (°C)"
+                },
+                {
+                    "type": "SelectVariable",
+                    "name": "VAR_TempFc_D1",
+                    "caption": "Tagesmittel morgen (°C)"
+                },
+                {
+                    "type": "SelectVariable",
+                    "name": "VAR_TempFc_D2",
+                    "caption": "Tagesmittel übermorgen (°C)"
+                },
+                {
+                    "type": "Label",
+                    "caption": "── Slot-Variablen selbst aggregieren (Modus 2) ──────"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Nur nötig für andere Wettermodule (DWD, Meteoblue …). Für OpenWeatherData reicht Modus Auto. Eltern-Objekt = Instanz/Kategorie der Slot-Variablen. Muster mit %d oder %02d für den Slot-Index."
+                },
+                {
+                    "type": "SelectInstance",
+                    "name": "LFC_FcParentID",
+                    "caption": "Eltern-Objekt der Slot-Variablen"
+                },
+                {
+                    "type": "ValidationTextBox",
+                    "name": "LFC_FcTimeIdent",
+                    "caption": "Ident-Muster Zeitstempel (Unix) je Slot"
+                },
+                {
+                    "type": "ValidationTextBox",
+                    "name": "LFC_FcTempIdentLow",
+                    "caption": "Ident-Muster Temperatur (bzw. Min) je Slot"
+                },
+                {
+                    "type": "ValidationTextBox",
+                    "name": "LFC_FcTempIdentHigh",
+                    "caption": "Ident-Muster Max-Temperatur (optional, dann (Min+Max)/2)"
+                },
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        {
+                            "type": "NumberSpinner",
+                            "name": "LFC_FcStartIndex",
+                            "caption": "Start-Index",
+                            "minimum": 0,
+                            "maximum": 200
+                        },
+                        {
+                            "type": "NumberSpinner",
+                            "name": "LFC_FcCount",
+                            "caption": "Anzahl Slots",
+                            "minimum": 1,
+                            "maximum": 200
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "🏠 Anwesenheit (Zukunft)",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "SelectVariable",
+                    "name": "VAR_PresenceFc",
+                    "caption": "Geplante Anwesenheit (bool/0..1) — leer = aktueller Zustand"
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "🧮 Modellparameter",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "NumberSpinner",
+                    "name": "LFC_LookbackDays",
+                    "caption": "Historie-Tiefe (Tage)",
+                    "minimum": 30,
+                    "maximum": 1095,
+                    "suffix": " d"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "LFC_K",
+                    "caption": "k — Anzahl ähnlicher Tage",
+                    "minimum": 3,
+                    "maximum": 40
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "LFC_Latitude",
+                    "caption": "Breitengrad (für Tageslänge)",
+                    "digits": 3,
+                    "suffix": " °"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "LFC_HDD_Base",
+                    "caption": "Heizgrenztemperatur (Basis für Heizgrad)",
+                    "digits": 1,
+                    "suffix": " °C"
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "🔥 Wärmepumpe (optional, separate Prognose)",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "Separate WP-Tagesprognose via Temperaturregression (kWh = a + b · Heizgrad). Benötigt WP-Leistung + Außentemperatur im Archiv."
+                },
+                {
+                    "type": "SelectVariable",
+                    "name": "VAR_WP_Power",
+                    "caption": "Wärmepumpe — LEISTUNG in W (archiviert)"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Prognose jetzt neu berechnen",
+            "onClick": "LFC_Rebuild($id);"
+        },
+        {
+            "type": "Button",
+            "caption": "Status anzeigen",
+            "onClick": "echo LFC_GetStatusText($id);"
+        },
+        {
+            "type": "Button",
+            "caption": "Prognose morgen (JSON) ausgeben",
+            "onClick": "echo print_r(LFC_GetForecast($id, 1), true);"
+        }
+    ],
+    "status": [
+        { "code": 102, "icon": "active",   "caption": "Aktiv" },
+        { "code": 104, "icon": "inactive", "caption": "Deaktiviert" }
+    ]
+}
