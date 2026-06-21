@@ -1,4 +1,15 @@
-# LoadForecast — Verbrauchsprognose für IP-Symcon
+# EnergiePrognose — Last- & PV-Prognose für IP-Symcon
+
+Energieprognose-Suite mit drei Bausteinen, die dem EMS beide Seiten der Energiebilanz
+1–3 Tage voraus liefern:
+
+- **LoadForecast** (Prefix `LFC`) — Verbrauchsprognose über ein Ähnliche-Tage-Verfahren (k-NN).
+- **PVForecast** (Prefix `PVF`) — physikbasierte PV-Erzeugungsprognose je Generator über eine
+  Wetter-/Solar-API ([Details unten](#pvforecast--pv-erzeugungsprognose)).
+- **EnergyForecastTile** (Prefix `EFTILE`) — kombinierte Kachel, die Erzeugung und Verbrauch
+  gemeinsam zeigt.
+
+## LoadForecast — Verbrauchsprognose
 
 Erstellt aus deinen Archivdaten eine **1–3-Tage-Verbrauchsprognose** und liefert sie
 als JSON-Profil (60/30/15-min-Auflösung, P10/P50/P90) zur direkten Nutzung durch das EMS.
@@ -138,3 +149,32 @@ Hintergrund und Schriftgröße sind einstellbar; Standard ist theme-konform
   feinere Stufen integrieren aus den Rohwerten — benötigt entsprechend feine Archivierung.
 - **Regionale Feiertage** über die Bundesland-Auswahl (Modellparameter).
 - **Feature-Gewichte** in `distance()` justieren (`wDT/wDL/wHDD/wPres`).
+
+---
+
+## PVForecast — PV-Erzeugungsprognose
+
+PV ist überwiegend **deterministische Physik** — daher kein Ähnliche-Tage-Verfahren,
+sondern Anlagengeometrie × Einstrahlungsvorhersage:
+
+1. **Pro PV-Generator** (Dachfläche/MPP-Tracker): Neigung, Azimut (0=Süd, −90=Ost, +90=West),
+   kWp. Alle Generatoren werden zur Gesamt-PV summiert.
+2. **Wählbare Vorhersagequelle**:
+   - **Open-Meteo** — kostenlos, ohne API-Key; liefert geneigte Einstrahlung (GTI). Leistung =
+     `kWp × GTI/1000 × Performance-Ratio` mit Temperatur-Derating. Universeller Default.
+   - **Forecast.Solar** — liefert PV-Leistung direkt; Gratis-Tarif ratenbegrenzt.
+   - **Solcast** — API-Key nötig, dafür inkl. P10/P90.
+3. **Selbstkalibrierung** (Open-Meteo, optional): vergleicht die gemessene Erzeugung (archivierte
+   Leistungsvariable je Generator) mit der aus *vergangener* Einstrahlung modellierten und lernt
+   einen Korrekturfaktor — fängt Verschattung, Verschmutzung und reale Leistung. Zusätzlich ein
+   manueller Korrekturfaktor je Generator.
+
+Ausgabe: stündliches Profil (P10/P50/P90 — bei Open-Meteo/Forecast.Solar als Linie, bei Solcast
+echtes Band) + kWh für heute/morgen/übermorgen. EMS-Zugriff: `PVF_GetForecast($id, $offset)`.
+
+## EnergyForecastTile — kombinierte Energie-Kachel
+
+Zeigt **PV-Erzeugung und Verbrauch** als zwei P10/P50/P90-Bänder in einem Diagramm — der
+EMS-Blick: Erzeugung gegen Verbrauch, die Lücke ist Netzbezug/Einspeisung. Findet die PV- und die
+Last-Instanz automatisch per Modul-GUID (funktioniert auch **PV-only**). Hover/Touch zeigt PV-Wert,
+Verbrauch und **Saldo** zur jeweiligen Uhrzeit; Farben/Schrift einstellbar, theme-konform.

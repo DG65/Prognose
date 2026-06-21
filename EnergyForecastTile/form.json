@@ -1,0 +1,70 @@
+{
+    "elements": [
+        {
+            "type": "Label",
+            "caption": "Quellen werden automatisch erkannt (je eine PV- und Lastprognose-Instanz). Nur bei mehreren Instanzen hier festlegen."
+        },
+        {
+            "type": "SelectInstance",
+            "name": "PVSource",
+            "caption": "PV-Prognose-Instanz (leer = automatisch)"
+        },
+        {
+            "type": "SelectInstance",
+            "name": "LoadSource",
+            "caption": "Last-Prognose-Instanz (leer = automatisch, optional)"
+        },
+        {
+            "type": "Select",
+            "name": "Days",
+            "caption": "Anzuzeigende Tage",
+            "options": [
+                { "caption": "Heute",          "value": 1 },
+                { "caption": "Heute + morgen", "value": 2 },
+                { "caption": "Heute + 2 Tage", "value": 3 }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "🎨 Darstellung",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "SelectColor",
+                    "name": "ColorPV",
+                    "caption": "Farbe PV-Erzeugung"
+                },
+                {
+                    "type": "SelectColor",
+                    "name": "ColorLoad",
+                    "caption": "Farbe Verbrauch"
+                },
+                {
+                    "type": "SelectColor",
+                    "name": "ColorBackground",
+                    "caption": "Hintergrund (−1 = IPS-Theme/transparent)"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "FontScale",
+                    "caption": "Schriftgröße (Faktor)",
+                    "digits": 2,
+                    "minimum": 0.5,
+                    "maximum": 2.5,
+                    "suffix": " ×"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Darstellung auf Standard zurücksetzen",
+            "onClick": "EFTILE_ResetStyle($id);"
+        }
+    ],
+    "status": [
+        { "code": 102, "icon": "active",   "caption": "Aktiv" },
+        { "code": 104, "icon": "inactive", "caption": "Keine Prognose-Instanz gefunden" }
+    ]
+}

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.0
+
+- **Bibliothek zur Energieprognose-Suite erweitert** (Last + PV in einem Repo). Zwei neue Module:
+- **PVForecast** (Typ 3, Prefix `PVF`) — **physikbasierte** PV-Erzeugungsprognose statt Mustersuche:
+  - Pro PV-Generator Anlagengeometrie (Neigung, Azimut, kWp); Generatoren werden zur Gesamt-PV summiert.
+  - **Wählbare Vorhersagequelle**: Open-Meteo (kostenlos, kein Key, geneigte Einstrahlung →
+    `kWp × GTI/1000 × PR` mit Temperatur-Derating), Forecast.Solar (liefert Leistung direkt) oder
+    Solcast (API-Key, inkl. P10/P90).
+  - **Selbstkalibrierung** (Open-Meteo): vergleicht gemessene mit aus vergangener Einstrahlung
+    modellierter Erzeugung und lernt je Generator einen Korrekturfaktor (Verschattung, Verschmutzung,
+    reale Leistung). Plus manueller Korrekturfaktor je Generator.
+  - Stündliche Ausgabe P10/P50/P90 + kWh für heute/morgen/übermorgen, per `PVF_GetForecast($id, $offset)`.
+  - Leistungsrechnung gegen die echte Open-Meteo-API plausibilisiert.
+- **EnergyForecastTile** (Typ 3, Prefix `EFTILE`) — kombinierte Kachel: PV-Erzeugung und Verbrauch
+  als zwei Bänder in einem Diagramm, Auto-Erkennung beider Quellen, Hover/Touch mit **Saldo**,
+  funktioniert auch PV-only.
+
 ## 0.4.0
 
 - **Wählbare zeitliche Auflösung** (60 / 30 / 15 Minuten, Modellparameter). 60 min nutzt weiterhin

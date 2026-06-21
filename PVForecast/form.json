@@ -1,0 +1,134 @@
+{
+    "elements": [
+        {
+            "type": "ExpansionPanel",
+            "caption": "⚙️ Allgemein",
+            "expanded": true,
+            "items": [
+                {
+                    "type": "CheckBox",
+                    "name": "PVF_Active",
+                    "caption": "Prognose aktiv"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "PVF_IntervalHours",
+                    "caption": "Neuberechnung alle … Stunden",
+                    "minimum": 1,
+                    "maximum": 24,
+                    "suffix": " h"
+                },
+                {
+                    "type": "Select",
+                    "name": "PVF_Log_Level",
+                    "caption": "Logging",
+                    "options": [
+                        { "caption": "Aus", "value": 0 },
+                        { "caption": "Basis", "value": 1 },
+                        { "caption": "Ausführlich", "value": 2 }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "🌐 Vorhersagequelle",
+            "expanded": true,
+            "items": [
+                {
+                    "type": "Select",
+                    "name": "PVF_Source",
+                    "caption": "Quelle",
+                    "options": [
+                        { "caption": "Open-Meteo (kostenlos, kein Key)", "value": 0 },
+                        { "caption": "Forecast.Solar (kostenlos, ratenbegrenzt)", "value": 1 },
+                        { "caption": "Solcast (API-Key nötig, P10/P90)", "value": 2 }
+                    ]
+                },
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        { "type": "NumberSpinner", "name": "PVF_Latitude",  "caption": "Breitengrad",  "digits": 4, "suffix": " °" },
+                        { "type": "NumberSpinner", "name": "PVF_Longitude", "caption": "Längengrad",   "digits": 4, "suffix": " °" }
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "caption": "Open-Meteo: Leistung = kWp × Einstrahlung/1000 × Performance-Ratio (mit Temperatur-Derating). Forecast.Solar liefert die Leistung direkt. Solcast braucht API-Key + je Generator eine Resource-ID."
+                },
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        { "type": "NumberSpinner", "name": "PVF_PR", "caption": "Performance-Ratio (Open-Meteo)", "digits": 2, "minimum": 0.5, "maximum": 1.0 },
+                        { "type": "NumberSpinner", "name": "PVF_TempCoeff", "caption": "Temp.-Koeffizient (%/K, 0=aus)", "digits": 2, "minimum": -1.0, "maximum": 0.0 }
+                    ]
+                },
+                {
+                    "type": "ValidationTextBox",
+                    "name": "PVF_SolcastKey",
+                    "caption": "Solcast API-Key (nur bei Solcast)"
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "☀️ PV-Generatoren (Pflicht)",
+            "expanded": true,
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "Je Dachfläche/MPP-Tracker eine Zeile mit Neigung, Azimut und kWp. Azimut: 0=Süd, −90=Ost, +90=West, ±180=Nord. Sie werden zur Gesamt-PV summiert. PowerVar (gemessene Leistung, archiviert) wird nur für die Selbstkalibrierung gebraucht; SolcastID nur bei Solcast."
+                },
+                {
+                    "type": "List",
+                    "name": "PVGenerators",
+                    "caption": "PV-Generatoren",
+                    "add": true,
+                    "delete": true,
+                    "columns": [
+                        { "caption": "Name", "name": "Name", "width": "120px", "add": "", "edit": { "type": "ValidationTextBox" } },
+                        { "caption": "Neigung °", "name": "Tilt", "width": "90px", "add": 30, "edit": { "type": "NumberSpinner", "minimum": 0, "maximum": 90 } },
+                        { "caption": "Azimut °", "name": "Azimuth", "width": "90px", "add": 0, "edit": { "type": "NumberSpinner", "minimum": -180, "maximum": 180 } },
+                        { "caption": "kWp", "name": "kWp", "width": "80px", "add": 5, "edit": { "type": "NumberSpinner", "digits": 2, "minimum": 0, "maximum": 1000 } },
+                        { "caption": "Korrektur", "name": "Factor", "width": "90px", "add": 1, "edit": { "type": "NumberSpinner", "digits": 2, "minimum": 0.1, "maximum": 3 } },
+                        { "caption": "Leistung (W, archiviert)", "name": "PowerVar", "width": "auto", "add": 0, "edit": { "type": "SelectVariable" } },
+                        { "caption": "Solcast-ID", "name": "SolcastId", "width": "180px", "add": "", "edit": { "type": "ValidationTextBox" } }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "🎯 Selbstkalibrierung (optional, Open-Meteo)",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "Vergleicht je Generator die gemessene mit der aus vergangener Einstrahlung modellierten Erzeugung und lernt einen Korrekturfaktor (Verschattung, Verschmutzung, reale Leistung). Benötigt die PowerVar je Generator."
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "PVF_Calibrate",
+                    "caption": "Selbstkalibrierung aktivieren"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "PVF_CalibDays",
+                    "caption": "Kalibrier-Zeitraum (Tage)",
+                    "minimum": 7,
+                    "maximum": 90,
+                    "suffix": " d"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        { "type": "Button", "caption": "Prognose jetzt neu berechnen", "onClick": "PVF_Rebuild($id);" },
+        { "type": "Button", "caption": "Status anzeigen", "onClick": "echo PVF_GetStatusText($id);" },
+        { "type": "Button", "caption": "PV-Prognose morgen (JSON) ausgeben", "onClick": "echo print_r(PVF_GetForecast($id, 1), true);" }
+    ],
+    "status": [
+        { "code": 102, "icon": "active", "caption": "Aktiv" },
+        { "code": 104, "icon": "inactive", "caption": "Deaktiviert / keine Daten" }
+    ]
+}

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        :root {
+            --pv: #e0a020;
+            --load: #2bb3c0;
+            --bg: transparent;
+            --text: #ffffff;
+            --textmuted: #9fb0c0;
+            --grid: rgba(127, 135, 145, .22);
+            --tip-bg: rgba(28, 38, 52, .97);
+            --scale: 1;
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --text: #1b2430;
+                --textmuted: #5c6b7a;
+                --grid: rgba(20, 30, 45, .14);
+                --tip-bg: rgba(255, 255, 255, .98);
+            }
+        }
+
+        html { height: 100%; background: var(--bg); overflow: hidden; }
+        body { margin: 0; height: 100%; box-sizing: border-box; font-family: var(--font); color: var(--text); }
+        .wrap { box-sizing: border-box; padding: 46px 16px 14px; }
+
+        .head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .title { font-size: calc(15px * var(--scale)); font-weight: 500; }
+        .legend { display: flex; gap: 14px; flex-wrap: wrap; }
+        .lg { font-size: calc(12px * var(--scale)); color: var(--textmuted); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .sw { width: 11px; height: 11px; border-radius: 2px; flex: 0 0 auto; }
+        .lg b { color: var(--text); font-weight: 500; }
+
+        .chart { width: 100%; position: relative; }
+        .chart svg { display: block; width: 100%; height: auto; cursor: crosshair; }
+        .empty { color: var(--textmuted); font-size: calc(13px * var(--scale)); padding: 24px 4px; }
+
+        .tip {
+            position: absolute; pointer-events: none; display: none;
+            background: var(--tip-bg); border: 1px solid var(--grid);
+            border-radius: 6px; padding: 6px 9px; font-size: calc(11px * var(--scale));
+            line-height: 1.5; color: var(--text); white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .18); z-index: 5;
+        }
+        .tip-h { color: var(--textmuted); margin-bottom: 2px; }
+        .tip b { font-weight: 500; }
+
+        text { font-family: var(--font); }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <div class="head">
+            <div class="title">Energieprognose</div>
+            <div class="legend" id="legend"></div>
+        </div>
+        <div class="chart" id="chart"></div>
+    </div>
+
+    <script>
+        var lastData = null, G = null, tipEl = null, hoverBound = false;
+
+        function handleMessage(payload) {
+            var data = (typeof payload === 'string') ? JSON.parse(payload) : payload;
+            if (!data) { return; }
+            lastData = data;
+            var root = document.documentElement.style;
+            if (data.pvColor) { root.setProperty('--pv', data.pvColor); }
+            if (data.loadColor) { root.setProperty('--load', data.loadColor); }
+            root.setProperty('--bg', data.bg ? data.bg : 'transparent');
+            root.setProperty('--scale', data.scale || 1);
+            render();
+        }
+
+        function fmt(v, d) { return (Math.round(v * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d); }
+        function pad(x) { return (x < 10 ? '0' : '') + x; }
+        function toKW(arr) { return arr.map(function (v) { return v / 1000; }); }
+
+        function render() {
+            var data = lastData;
+            var chart = document.getElementById('chart');
+            var legend = document.getElementById('legend');
+            legend.innerHTML = '';
+            G = null;
+
+            if (!data || !data.hasData || !data.days || !data.days.length) {
+                chart.innerHTML = '<div class="empty">' + ((data && data.message) || 'Keine Daten') + '</div>';
+                return;
+            }
+
+            // kW-Reihen je Tag aufbereiten
+            var nDays = data.days.length;
+            var gdays = [];
+            var pvSum = 0, loadSum = 0, pvAny = false, loadAny = false;
+            data.days.forEach(function (d) {
+                var pv = d.pv ? { p10: toKW(d.pv.p10), p50: toKW(d.pv.p50), p90: toKW(d.pv.p90) } : null;
+                var ld = d.load ? { p10: toKW(d.load.p10), p50: toKW(d.load.p50), p90: toKW(d.load.p90) } : null;
+                if (d.pv) { pvSum += d.pv.kwh; pvAny = true; }
+                if (d.load) { loadSum += d.load.kwh; loadAny = true; }
+                gdays.push({ label: d.label, pv: pv, load: ld });
+            });
+
+            // Legende
+            if (pvAny) { legend.innerHTML += '<span class="lg"><span class="sw" style="background:var(--pv)"></span>PV <b>' + fmt(pvSum, 1) + ' kWh</b></span>'; }
+            if (loadAny) { legend.innerHTML += '<span class="lg"><span class="sw" style="background:var(--load)"></span>Verbrauch <b>' + fmt(loadSum, 1) + ' kWh</b></span>'; }
+
+            // gemeinsames yMax über beide Reihen
+            var max = 0;
+            gdays.forEach(function (g) {
+                [g.pv, g.load].forEach(function (s) {
+                    if (s) { s.p90.forEach(function (v) { if (v > max) { max = v; } }); }
+                });
+            });
+            var yMax = Math.max(0.5, Math.ceil(max * 1.15 * 2) / 2);
+
+            var W = 700, H = 240, mL = 34, mR = 8, mT = 10, mB = 30;
+            var pw = W - mL - mR, ph = H - mT - mB;
+            var dayW = pw / nDays;
+            var y = function (v) { return mT + ph * (1 - v / yMax); };
+            var xs = function (d, i, m) { return mL + d * dayW + (m > 1 ? (i / (m - 1)) : 0.5) * dayW; };
+
+            var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Energieprognose: PV-Erzeugung und Verbrauch">';
+
+            // Y-Gitter
+            [0, yMax / 2, yMax].forEach(function (v) {
+                var yy = y(v);
+                svg += '<line x1="' + mL + '" y1="' + fmt(yy, 1) + '" x2="' + (W - mR) + '" y2="' + fmt(yy, 1) + '" stroke="var(--grid)" stroke-width="1"/>';
+                svg += '<text x="' + (mL - 5) + '" y="' + fmt(yy + 3, 1) + '" text-anchor="end" font-size="10" fill="var(--textmuted)">' + fmt(v, 1) + '</text>';
+            });
+            svg += '<text x="2" y="' + (mT + 6) + '" font-size="9" fill="var(--textmuted)">kW</text>';
+
+            // Tagestrenner + Labels
+            for (var d = 0; d < nDays; d++) {
+                if (d > 0) {
+                    var xb = mL + d * dayW;
+                    svg += '<line x1="' + fmt(xb, 1) + '" y1="' + mT + '" x2="' + fmt(xb, 1) + '" y2="' + (mT + ph) + '" stroke="var(--grid)" stroke-width="1"/>';
+                }
+                svg += '<text x="' + fmt(mL + (d + 0.5) * dayW, 1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--textmuted)">' + gdays[d].label + '</text>';
+            }
+
+            // Reihen zeichnen (PV zuerst, Verbrauch darüber)
+            function series(d, s, colorVar) {
+                if (!s) { return ''; }
+                var m = s.p50.length;
+                if (m < 2) { return ''; }
+                var out = '';
+                var band = 'M';
+                for (var i = 0; i < m; i++) { band += ' ' + fmt(xs(d, i, m), 1) + ',' + fmt(y(s.p90[i]), 1); }
+                for (var i = m - 1; i >= 0; i--) { band += ' ' + fmt(xs(d, i, m), 1) + ',' + fmt(y(s.p10[i]), 1); }
+                band += ' Z';
+                out += '<path d="' + band + '" fill="' + colorVar + '" fill-opacity="0.16" stroke="none"/>';
+                var line = '';
+                for (var i = 0; i < m; i++) { line += (i ? ' L' : 'M') + ' ' + fmt(xs(d, i, m), 1) + ',' + fmt(y(s.p50[i]), 1); }
+                out += '<path d="' + line + '" fill="none" stroke="' + colorVar + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+                return out;
+            }
+            for (var d = 0; d < nDays; d++) {
+                svg += series(d, gdays[d].pv, 'var(--pv)');
+                svg += series(d, gdays[d].load, 'var(--load)');
+            }
+
+            // „jetzt"-Marker (Tag 0 = heute)
+            if (gdays[0].label === 'heute') {
+                var ref = gdays[0].pv || gdays[0].load;
+                if (ref) {
+                    var m0 = ref.p50.length;
+                    var now = new Date();
+                    var idxNow = Math.floor((now.getHours() * 60 + now.getMinutes()) / (1440 / m0));
+                    if (idxNow >= 0 && idxNow < m0) {
+                        var xn = xs(0, idxNow, m0);
+                        svg += '<line x1="' + fmt(xn, 1) + '" y1="' + mT + '" x2="' + fmt(xn, 1) + '" y2="' + (mT + ph) + '" stroke="var(--textmuted)" stroke-width="1" stroke-dasharray="3 3" opacity="0.6"/>';
+                    }
+                }
+            }
+
+            // Hover-Gruppe
+            svg += '<g id="hv" style="display:none">';
+            svg += '<line id="hvline" y1="' + mT + '" y2="' + (mT + ph) + '" stroke="var(--textmuted)" stroke-width="1" opacity="0.7"/>';
+            svg += '<circle id="hvpv" r="3.5" fill="var(--pv)" style="display:none"/>';
+            svg += '<circle id="hvload" r="3.5" fill="var(--load)" style="display:none"/>';
+            svg += '</g>';
+
+            svg += '</svg>';
+            chart.innerHTML = svg;
+
+            G = { W: W, mL: mL, mT: mT, ph: ph, dayW: dayW, nDays: nDays, yMax: yMax,
+                  y: y, xs: xs, days: gdays,
+                  hv: chart.querySelector('#hv'), hvline: chart.querySelector('#hvline'),
+                  hvpv: chart.querySelector('#hvpv'), hvload: chart.querySelector('#hvload') };
+            ensureTip();
+            bindHover();
+        }
+
+        function ensureTip() {
+            var chart = document.getElementById('chart');
+            if (!tipEl) { tipEl = document.createElement('div'); tipEl.className = 'tip'; }
+            if (tipEl.parentNode !== chart) { chart.appendChild(tipEl); }
+        }
+
+        function hideHover() {
+            if (G && G.hv) { G.hv.style.display = 'none'; }
+            if (tipEl) { tipEl.style.display = 'none'; }
+        }
+
+        function showHover(clientX, clientY) {
+            if (!G) { return; }
+            var chart = document.getElementById('chart');
+            var svgEl = chart.querySelector('svg');
+            if (!svgEl) { return; }
+            var r = svgEl.getBoundingClientRect();
+            if (r.width <= 0) { return; }
+
+            var vbX = (clientX - r.left) / r.width * G.W;
+            var d = Math.floor((vbX - G.mL) / G.dayW);
+            d = Math.max(0, Math.min(G.nDays - 1, d));
+            var frac = ((vbX - G.mL) - d * G.dayW) / G.dayW;
+            frac = Math.max(0, Math.min(1, frac));
+
+            var day = G.days[d];
+            var ref = day.pv || day.load;
+            if (!ref) { return; }
+            var mRef = ref.p50.length;
+            var slotIdx = Math.round(frac * (mRef - 1));
+            var tMin = Math.round(slotIdx * (1440 / mRef));
+            var hx = G.xs(d, slotIdx, mRef);
+
+            G.hvline.setAttribute('x1', hx); G.hvline.setAttribute('x2', hx);
+
+            var rows = '';
+            function place(circle, s, colorName, name) {
+                if (!s) { circle.style.display = 'none'; return null; }
+                var m = s.p50.length;
+                var idx = Math.round(frac * (m - 1));
+                var v = s.p50[idx];
+                circle.setAttribute('cx', G.xs(d, idx, m));
+                circle.setAttribute('cy', G.y(v));
+                circle.style.display = '';
+                rows += '<div><b style="color:' + colorName + '">' + fmt(v, 2) + ' kW</b> ' + name + '</div>';
+                return v;
+            }
+            var pvV = place(G.hvpv, day.pv, 'var(--pv)', 'PV');
+            var loadV = place(G.hvload, day.load, 'var(--load)', 'Verbrauch');
+            G.hv.style.display = '';
+
+            var label = day.label.charAt(0).toUpperCase() + day.label.slice(1);
+            var hh = pad(Math.floor(tMin / 60)) + ':' + pad(tMin % 60);
+            var net = '';
+            if (pvV !== null && loadV !== null) {
+                var saldo = pvV - loadV;
+                net = '<div class="tip-h" style="margin-top:2px">Saldo ' + (saldo >= 0 ? '+' : '') + fmt(saldo, 2) + ' kW</div>';
+            }
+            tipEl.innerHTML = '<div class="tip-h">' + label + ' ' + hh + '</div>' + rows + net;
+            tipEl.style.display = 'block';
+
+            var cr = chart.getBoundingClientRect();
+            var px = clientX - cr.left, py = clientY - cr.top;
+            var tw = tipEl.offsetWidth, th = tipEl.offsetHeight;
+            var left = px + 14; if (left + tw > cr.width) { left = px - 14 - tw; } if (left < 0) { left = 2; }
+            var top = py - th - 10; if (top < 0) { top = py + 16; }
+            tipEl.style.left = left + 'px';
+            tipEl.style.top = top + 'px';
+        }
+
+        function bindHover() {
+            if (hoverBound) { return; }
+            hoverBound = true;
+            var chart = document.getElementById('chart');
+            chart.addEventListener('mousemove', function (e) { showHover(e.clientX, e.clientY); });
+            chart.addEventListener('mouseleave', hideHover);
+            chart.addEventListener('touchstart', function (e) { var t = e.touches[0]; if (t) { showHover(t.clientX, t.clientY); } });
+            chart.addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) { showHover(t.clientX, t.clientY); } });
+            chart.addEventListener('touchend', hideHover);
+        }
+
+        window.addEventListener('resize', render);
+    </script>
+</body>
+
+</html>
