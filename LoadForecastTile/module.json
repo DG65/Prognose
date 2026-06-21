@@ -1,0 +1,15 @@
+{
+    "id": "{1A8D580B-67BB-4711-BB29-3284F875FB77}",
+    "library": "{2D15AFF6-7CD5-4147-B438-B4288BD598AE}",
+    "name": "LoadForecastTile",
+    "type": 3,
+    "vendor": "DG65",
+    "aliases": [
+        "Lastprognose Kachel",
+        "Verbrauchsprognose Diagramm"
+    ],
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "LFCTILE"
+}

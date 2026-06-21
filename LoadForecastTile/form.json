@@ -1,0 +1,56 @@
+{
+    "elements": [
+        {
+            "type": "SelectInstance",
+            "name": "SourceInstance",
+            "caption": "Prognose-Instanz (leer = automatisch, wenn nur eine vorhanden)"
+        },
+        {
+            "type": "Select",
+            "name": "Days",
+            "caption": "Anzuzeigende Tage",
+            "options": [
+                { "caption": "Heute",                  "value": 1 },
+                { "caption": "Heute + morgen",         "value": 2 },
+                { "caption": "Heute + 2 Tage",         "value": 3 }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "🎨 Darstellung",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "SelectColor",
+                    "name": "ColorAccent",
+                    "caption": "Akzentfarbe (Median-Linie & Band)"
+                },
+                {
+                    "type": "SelectColor",
+                    "name": "ColorBackground",
+                    "caption": "Hintergrund (−1 = IPS-Theme/transparent)"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "FontScale",
+                    "caption": "Schriftgröße (Faktor)",
+                    "digits": 2,
+                    "minimum": 0.5,
+                    "maximum": 2.5,
+                    "suffix": " ×"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Darstellung auf Standard zurücksetzen",
+            "onClick": "LFCTILE_ResetStyle($id);"
+        }
+    ],
+    "status": [
+        { "code": 102, "icon": "active",   "caption": "Aktiv" },
+        { "code": 104, "icon": "inactive", "caption": "Keine Prognose-Instanz gefunden" }
+    ]
+}

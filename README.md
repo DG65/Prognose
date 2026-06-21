@@ -112,6 +112,15 @@ $spread = array_sum($fc['p90']) - array_sum($fc['p10']);
 Das **Unsicherheitsband** (P10/P90) erlaubt risikobewusste Entscheidungen:
 bei großer Spreizung konservativer puffern, bei enger Spreizung optimistischer fahren.
 
+## Kachel (LoadForecastTile)
+
+Das Paket enthält ein eigenständiges Kachel-Modul **LoadForecastTile** für die
+Tile-Visualisierung. Es findet die `LoadForecast`-Instanz automatisch (oder per
+Auswahl) und zeichnet das P10/P50/P90-Band der nächsten 1–3 Tage als SVG-Diagramm
+(Median-Linie + Unsicherheitsfläche, Tagestrenner, kWh je Tag, „jetzt"-Marker) —
+ohne externe Chart-Library. Akzentfarbe, Hintergrund und Schriftgröße sind
+einstellbar; Standard ist theme-konform (transparent, automatische Textfarbe).
+
 ## Ausbaustufen
 
 - **15-Minuten-Auflösung** (96 Slots) statt stündlich — Konstante `LFC_SLOTS` + Integration aus `AC_GetLoggedValues` (aktuell stündlich via `AC_GetAggregatedValues` für Robustheit).

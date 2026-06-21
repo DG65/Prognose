@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        :root {
+            --accent: #2bb3c0;
+            --bg: transparent;
+            --text: #ffffff;
+            --textmuted: #9fb0c0;
+            --grid: rgba(127, 135, 145, .22);
+            --scale: 1;
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --text: #1b2430;
+                --textmuted: #5c6b7a;
+                --grid: rgba(20, 30, 45, .14);
+            }
+        }
+
+        html {
+            height: 100%;
+            background: var(--bg);
+            overflow: hidden;
+        }
+
+        body {
+            margin: 0;
+            height: 100%;
+            box-sizing: border-box;
+            font-family: var(--font);
+            color: var(--text);
+        }
+
+        .wrap {
+            box-sizing: border-box;
+            padding: 46px 16px 14px;
+        }
+
+        .head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .title {
+            font-size: calc(15px * var(--scale));
+            font-weight: 500;
+        }
+
+        .chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .chip {
+            font-size: calc(12px * var(--scale));
+            color: var(--textmuted);
+            white-space: nowrap;
+        }
+
+        .chip b {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .chart {
+            width: 100%;
+        }
+
+        .chart svg {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .empty {
+            color: var(--textmuted);
+            font-size: calc(13px * var(--scale));
+            padding: 24px 4px;
+        }
+
+        text {
+            font-family: var(--font);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <div class="head">
+            <div class="title">Verbrauchsprognose</div>
+            <div class="chips" id="chips"></div>
+        </div>
+        <div class="chart" id="chart"></div>
+    </div>
+
+    <script>
+        var lastData = null;
+
+        function handleMessage(data) {
+            if (!data) { return; }
+            lastData = data;
+
+            var root = document.documentElement.style;
+            if (data.accent) { root.setProperty('--accent', data.accent); }
+            root.setProperty('--bg', data.bg ? data.bg : 'transparent');
+            root.setProperty('--scale', data.scale || 1);
+
+            render();
+        }
+
+        function fmt(v, d) {
+            return (Math.round(v * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d);
+        }
+
+        function render() {
+            var data = lastData;
+            var chart = document.getElementById('chart');
+            var chips = document.getElementById('chips');
+            chips.innerHTML = '';
+
+            if (!data || !data.hasData || !data.days || !data.days.length) {
+                chart.innerHTML = '<div class="empty">' + ((data && data.message) || 'Keine Daten') + '</div>';
+                return;
+            }
+
+            // kWh-Chips je Tag
+            data.days.forEach(function (d) {
+                var el = document.createElement('span');
+                el.className = 'chip';
+                el.innerHTML = d.label + ' <b>' + fmt(d.kwh, 1) + ' kWh</b>';
+                chips.appendChild(el);
+            });
+
+            // Stundenwerte aneinanderreihen, W -> kW
+            var p10 = [], p50 = [], p90 = [], bounds = [];
+            data.days.forEach(function (d) {
+                bounds.push(p50.length);
+                var n = d.p50.length;
+                for (var i = 0; i < n; i++) {
+                    p50.push(d.p50[i] / 1000);
+                    p10.push((d.p10[i] != null ? d.p10[i] : d.p50[i]) / 1000);
+                    p90.push((d.p90[i] != null ? d.p90[i] : d.p50[i]) / 1000);
+                }
+            });
+            var n = p50.length;
+            if (n < 2) { chart.innerHTML = '<div class="empty">Zu wenig Datenpunkte</div>'; return; }
+
+            // Geometrie
+            var W = 700, H = 240, mL = 34, mR = 8, mT = 10, mB = 30;
+            var pw = W - mL - mR, ph = H - mT - mB;
+
+            var max = 0;
+            for (var i = 0; i < n; i++) { if (p90[i] > max) { max = p90[i]; } }
+            var yMax = Math.max(0.5, Math.ceil(max * 1.15 * 2) / 2); // auf 0,5 kW aufrunden
+
+            var x = function (i) { return mL + (i / (n - 1)) * pw; };
+            var y = function (v) { return mT + ph * (1 - v / yMax); };
+
+            var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Verbrauchsprognose mit Unsicherheitsband">';
+
+            // Y-Gitter + Beschriftung (0, Mitte, Max in kW)
+            [0, yMax / 2, yMax].forEach(function (v) {
+                var yy = y(v);
+                svg += '<line x1="' + mL + '" y1="' + fmt(yy, 1) + '" x2="' + (W - mR) + '" y2="' + fmt(yy, 1) + '" stroke="var(--grid)" stroke-width="1"/>';
+                svg += '<text x="' + (mL - 5) + '" y="' + fmt(yy + 3, 1) + '" text-anchor="end" font-size="10" fill="var(--textmuted)">' + fmt(v, v < 10 ? 1 : 0) + '</text>';
+            });
+            svg += '<text x="2" y="' + (mT + 6) + '" font-size="9" fill="var(--textmuted)">kW</text>';
+
+            // Tagestrenner + Tageslabels
+            bounds.forEach(function (b, idx) {
+                if (idx > 0) {
+                    var xb = x(b);
+                    svg += '<line x1="' + fmt(xb, 1) + '" y1="' + mT + '" x2="' + fmt(xb, 1) + '" y2="' + (mT + ph) + '" stroke="var(--grid)" stroke-width="1"/>';
+                }
+                var end = (idx + 1 < bounds.length) ? bounds[idx + 1] : n;
+                var cx = (x(b) + x(end - 1)) / 2;
+                svg += '<text x="' + fmt(cx, 1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--textmuted)">' + data.days[idx].label + '</text>';
+            });
+
+            // P10–P90-Band
+            var band = 'M';
+            for (var i = 0; i < n; i++) { band += ' ' + fmt(x(i), 1) + ',' + fmt(y(p90[i]), 1); }
+            for (var i = n - 1; i >= 0; i--) { band += ' ' + fmt(x(i), 1) + ',' + fmt(y(p10[i]), 1); }
+            band += ' Z';
+            svg += '<path d="' + band + '" fill="var(--accent)" fill-opacity="0.18" stroke="none"/>';
+
+            // Median-Linie (P50)
+            var line = '';
+            for (var i = 0; i < n; i++) { line += (i ? ' L' : 'M') + ' ' + fmt(x(i), 1) + ',' + fmt(y(p50[i]), 1); }
+            svg += '<path d="' + line + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+
+            // „jetzt"-Marker (erster Tag = heute, Stundenindex = aktuelle Stunde)
+            if (data.days[0] && data.days[0].label === 'heute') {
+                var hNow = new Date().getHours();
+                if (hNow >= 0 && hNow < (data.days[0].p50.length)) {
+                    var xn = x(hNow);
+                    svg += '<line x1="' + fmt(xn, 1) + '" y1="' + mT + '" x2="' + fmt(xn, 1) + '" y2="' + (mT + ph) + '" stroke="var(--accent)" stroke-width="1" stroke-dasharray="3 3" opacity="0.8"/>';
+                    svg += '<circle cx="' + fmt(xn, 1) + '" cy="' + fmt(y(p50[hNow]), 1) + '" r="3" fill="var(--accent)"/>';
+                }
+            }
+
+            svg += '</svg>';
+            chart.innerHTML = svg;
+        }
+
+        window.addEventListener('resize', render);
+    </script>
+</body>
+
+</html>
