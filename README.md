@@ -20,9 +20,17 @@ Modul ein **Ähnliche-Tage-Verfahren (k-NN)**:
 So braucht „Winter-Samstag-im-Urlaub" nie einen eigenen Bucket — das Verfahren findet
 einfach die passenden Nachbartage.
 
-Die **Wärmepumpe** (größter wetterabhängiger Verbraucher) wird optional separat über
-eine lineare Temperaturregression (`kWh = a + b · Heizgrad`) prognostiziert und kann
-beim Hauptverbrauch abgezogen werden, sodass nur die planbare Grundlast übrig bleibt.
+**Temperaturabhängige Geräte** (WP, Klima — die größten wetterabhängigen Verbraucher)
+werden optional separat über eine Temperaturregression prognostiziert und können beim
+Hauptverbrauch abgezogen werden, sodass nur die planbare Grundlast übrig bleibt. Je
+Gerät ist die Betriebsart wählbar:
+
+- **Heizen**: `kWh = a + b · Heizgrad`
+- **Kühlen**: `kWh = a + c · Kühlgrad`
+- **Heizen + Kühlen** (Luft-Luft-WP/Klima): V-Kurve `kWh = a + b · Heizgrad + c · Kühlgrad`
+
+Heizgrad = `max(0, Heizgrenze − T)`, Kühlgrad = `max(0, T − Kühlgrenze)`. Mehrere Geräte
+werden einzeln gefittet und summiert.
 
 ## Einrichtung
 

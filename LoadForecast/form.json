@@ -225,17 +225,53 @@
         },
         {
             "type": "ExpansionPanel",
-            "caption": "🔥 Wärmepumpe (optional, separate Prognose)",
+            "caption": "🔥 Temperaturabhängige Geräte (optional, separate Prognose)",
             "expanded": false,
             "items": [
                 {
                     "type": "Label",
-                    "caption": "Separate WP-Tagesprognose via Temperaturregression (kWh = a + b · Heizgrad). Benötigt WP-Leistung + Außentemperatur im Archiv."
+                    "caption": "Separate Tagesprognose je Gerät via Temperaturregression. Heizen: kWh = a + b·Heizgrad. Kühlen: kWh = a + c·Kühlgrad. Beides (Luft-Luft-WP/Klima): V-Kurve a + b·Heizgrad + c·Kühlgrad. Benötigt Geräte-Leistung (W) + Außentemperatur im Archiv."
                 },
                 {
-                    "type": "SelectVariable",
-                    "name": "VAR_WP_Power",
-                    "caption": "Wärmepumpe — LEISTUNG in W (archiviert)"
+                    "type": "List",
+                    "name": "WPDevices",
+                    "caption": "Geräte (WP, Klima)",
+                    "add": true,
+                    "delete": true,
+                    "columns": [
+                        {
+                            "caption": "Leistung (W, archiviert)",
+                            "name": "PowerVar",
+                            "width": "auto",
+                            "add": 0,
+                            "edit": { "type": "SelectVariable" }
+                        },
+                        {
+                            "caption": "Betriebsart",
+                            "name": "Mode",
+                            "width": "200px",
+                            "add": 0,
+                            "edit": {
+                                "type": "Select",
+                                "options": [
+                                    { "caption": "Heizen",          "value": 0 },
+                                    { "caption": "Kühlen",          "value": 1 },
+                                    { "caption": "Heizen + Kühlen", "value": 2 }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "LFC_CDD_Base",
+                    "caption": "Kühlgrenztemperatur (Basis für Kühlgrad)",
+                    "digits": 1,
+                    "suffix": " °C"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Hinweis: Das frühere Einzelfeld wurde durch diese Liste ersetzt. Eine bestehende Konfiguration wirkt übergangsweise als Heiz-Gerät weiter, bis du sie hier als Gerät einträgst."
                 }
             ]
         }

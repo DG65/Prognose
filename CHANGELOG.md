@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0
+
+- **Separate Geräteprognose auf Heizen/Kühlen erweitert** (für Luft-Luft-WP/Klimaanlagen):
+  - Das frühere Einzelfeld „Wärmepumpe" ist jetzt eine **Geräteliste** mit je eigener Betriebsart
+    (Heizen / Kühlen / beides). Pro Gerät wird eine eigene Regression gefittet, die Summe ergibt die
+    Gesamtprognose (`LFC_WPkWhTomorrow`).
+  - Betriebsart „Heizen + Kühlen" nutzt eine **V-Kurve**: `kWh = a + b·Heizgrad + c·Kühlgrad`
+    mit getrennten Knickpunkten (Heiz- und Kühlgrenztemperatur). Damit wird ein Gerät, das im
+    Winter heizt und im Sommer kühlt, in beide Richtungen korrekt prognostiziert.
+  - Neue Kühlgrenztemperatur (`LFC_CDD_Base`, Standard 22 °C); Heizgrenze wie bisher (15 °C).
+  - Gelöst über die Normalgleichungen mit Gauß-Elimination; bei singulärer Datenlage (z.B. kein
+    Kühlbedarf in der Historie) wird das Gerät sauber übersprungen.
+  - **Abwärtskompatibel**: eine bestehende Einzelfeld-Konfiguration wirkt übergangsweise als
+    Heiz-Gerät weiter, bis sie in der Liste eingetragen wird.
+
 ## 0.2.0
 
 - Neues, eigenständiges Kachel-Modul **LoadForecastTile** (Typ 3, Prefix `LFCTILE`) in derselben

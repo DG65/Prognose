@@ -2,9 +2,9 @@
     "id": "{2D15AFF6-7CD5-4147-B438-B4288BD598AE}",
     "author": "DG65",
     "name": "LoadForecast",
-    "version": "0.2",
-    "build": 2,
-    "date": 1750464000,
+    "version": "0.3",
+    "build": 3,
+    "date": 1750636800,
     "description": "Lastprognose für IP-Symcon. Erstellt aus den Archivdaten eine 1–3-Tage-Verbrauchsprognose über ein Ähnliche-Tage-Verfahren (k-NN) mit Feature-Vektor (Tagtyp, Tageslänge, Außentemperatur, Anwesenheit), inkl. Unsicherheitsband (P10/P50/P90) und optionaler Wärmepumpen-Temperaturregression. Liefert JSON-Profile zur direkten Nutzung durch das EMS.",
     "url": "https://github.com/DG65/LastPrognose",
     "modules": [

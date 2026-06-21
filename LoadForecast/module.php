@@ -31,6 +31,11 @@ define('LFC_FC_AUTO',  0);  // OpenWeatherData automatisch, sonst Klimatologie
 define('LFC_FC_DAILY', 1);  // drei Tagesmittel-Variablen
 define('LFC_FC_IDENT', 2);  // Slot-Aggregation über frei wählbare Ident-Muster
 
+// Betriebsart temperaturabhängiger Geräte (separate Prognose)
+define('LFC_WP_HEAT', 0);   // nur Heizen   → kWh = a + b·Heizgrad
+define('LFC_WP_COOL', 1);   // nur Kühlen   → kWh = a + c·Kühlgrad
+define('LFC_WP_BOTH', 2);   // Heizen+Kühlen → V-Kurve a + b·Heizgrad + c·Kühlgrad
+
 // Logging-Level
 define('LFC_LOG_OFF',     0);
 define('LFC_LOG_BASIC',   1);
@@ -102,7 +107,11 @@ class LoadForecast extends IPSModule
         $this->RegisterPropertyFloat(  'LFC_Latitude',       49.0);
         $this->RegisterPropertyFloat(  'LFC_HDD_Base',       15.0);
 
-        // ── Wärmepumpe (optional, separate Prognose) ────────────────
+        // ── Temperaturabhängige Geräte (optional, separate Prognose) ─
+        // Liste je Gerät: { "PowerVar": <id>, "Mode": 0=Heizen|1=Kühlen|2=beides }.
+        $this->RegisterPropertyString('WPDevices',           '[]');
+        $this->RegisterPropertyFloat('LFC_CDD_Base',         22.0);
+        // Legacy-Einzelfeld (vor 0.3) — bleibt als Fallback erhalten.
         $this->RegisterPropertyInteger('VAR_WP_Power',       0);
 
         // ── Ausgabe-Variablen ───────────────────────────────────────
@@ -645,51 +654,155 @@ class LoadForecast extends IPSModule
     }
 
     // ----------------------------------------------------------------
-    //  Wärmepumpe — separate Temperaturregression (optional)
+    //  Temperaturabhängige Geräte — separate Regression (optional)
     // ----------------------------------------------------------------
 
     /**
-     * Erwarteter WP-Tagesverbrauch (kWh) für $offset Tage.
-     * Lineares Modell kWh = a + b · Heizgrad, gefittet über die
-     * Historie. Rückgabe null, wenn keine WP-Variable konfiguriert
-     * ist oder zu wenige Datenpunkte vorliegen.
+     * Erwarteter Tagesverbrauch (kWh) ALLER temperaturabhängigen Geräte
+     * (WP, Klima) für $offset Tage — Summe der Einzelprognosen.
+     * Rückgabe null, wenn nichts konfiguriert ist oder kein Gerät genug
+     * Daten für eine Regression hat.
      */
     private function wpForecast(int $offset)
     {
-        $vid = $this->ReadPropertyInteger('VAR_WP_Power');
-        if ($vid <= 0 || !IPS_VariableExists($vid)) { return null; }
+        $devices = $this->wpDevices();
+        if (count($devices) === 0) { return null; }
 
-        $lookback = min(180, $this->ReadPropertyInteger('LFC_LookbackDays'));
-        $base     = $this->ReadPropertyFloat('LFC_HDD_Base');
+        $total = 0.0; $any = false;
+        foreach ($devices as $dev) {
+            $kwh = $this->wpDeviceForecast($dev['var'], $dev['mode'], $offset);
+            if ($kwh !== null) { $total += $kwh; $any = true; }
+        }
+        return $any ? $total : null;
+    }
 
-        $xs = []; $ys = [];
+    /**
+     * Geräteliste aus der Konfiguration. Fällt auf das Legacy-Einzelfeld
+     * (vor 0.3) als Heiz-Gerät zurück, solange die Liste leer ist.
+     */
+    private function wpDevices(): array
+    {
+        $out  = [];
+        $list = json_decode($this->ReadPropertyString('WPDevices'), true);
+        if (is_array($list)) {
+            foreach ($list as $row) {
+                $vid = isset($row['PowerVar']) ? (int)$row['PowerVar'] : 0;
+                if ($vid > 0 && IPS_VariableExists($vid)) {
+                    $out[] = ['var' => $vid, 'mode' => (int)($row['Mode'] ?? LFC_WP_HEAT)];
+                }
+            }
+        }
+        if (count($out) === 0) {
+            $legacy = $this->ReadPropertyInteger('VAR_WP_Power');
+            if ($legacy > 0 && IPS_VariableExists($legacy)) {
+                $out[] = ['var' => $legacy, 'mode' => LFC_WP_HEAT];
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Tagesverbrauch (kWh) eines einzelnen Geräts für $offset Tage.
+     * Modell je nach Betriebsart:
+     *   Heizen  : kWh = a + b·Heizgrad
+     *   Kühlen  : kWh = a + c·Kühlgrad
+     *   beides  : kWh = a + b·Heizgrad + c·Kühlgrad  (V-Kurve)
+     * Heizgrad = max(0, Heizgrenze − T), Kühlgrad = max(0, T − Kühlgrenze).
+     * Rückgabe null bei zu wenig Daten oder singulärer Regression.
+     */
+    private function wpDeviceForecast(int $vid, int $mode, int $offset)
+    {
+        $lookback = $this->ReadPropertyInteger('LFC_LookbackDays');
+        $hBase    = $this->ReadPropertyFloat('LFC_HDD_Base');
+        $cBase    = $this->ReadPropertyFloat('LFC_CDD_Base');
+
+        $X = []; $y = [];
         for ($d = 1; $d <= $lookback; $d++) {
             $ts   = strtotime('today -' . $d . ' days');
             $prof = $this->hourlyProfile($vid, $ts);
             $temp = $this->dailyMean($this->ReadPropertyInteger('VAR_TempHistory'), $ts);
             if ($prof === null || $temp === null) { continue; }
-            $kwh  = array_sum($prof) / 1000.0;
-            $xs[] = max(0.0, $base - $temp);
-            $ys[] = $kwh;
-        }
-        if (count($xs) < 10) { return null; }
 
-        // Lineare Regression (Least Squares).
-        $n = count($xs);
-        $sx = array_sum($xs); $sy = array_sum($ys);
-        $sxx = 0.0; $sxy = 0.0;
-        for ($i = 0; $i < $n; $i++) {
-            $sxx += $xs[$i] * $xs[$i];
-            $sxy += $xs[$i] * $ys[$i];
+            $hdd = max(0.0, $hBase - $temp);
+            $cdd = max(0.0, $temp - $cBase);
+            $X[] = $this->wpFeatureRow($mode, $hdd, $cdd);
+            $y[] = array_sum($prof) / 1000.0;
         }
-        $denom = ($n * $sxx - $sx * $sx);
-        if (abs($denom) < 1e-9) { return $sy / $n; }
-        $b = ($n * $sxy - $sx * $sy) / $denom;
-        $a = ($sy - $b * $sx) / $n;
+
+        $need = ($mode === LFC_WP_BOTH) ? 20 : 10;
+        if (count($X) < $need) { return null; }
+
+        $coef = $this->fitLeastSquares($X, $y);
+        if ($coef === null) { return null; }
 
         $targetTs = strtotime('today +' . $offset . ' days');
-        $hdd      = max(0.0, $base - $this->forecastTemp($targetTs));
-        return max(0.0, $a + $b * $hdd);
+        $temp     = $this->forecastTemp($targetTs);
+        $hdd      = max(0.0, $hBase - $temp);
+        $cdd      = max(0.0, $temp - $cBase);
+        $row      = $this->wpFeatureRow($mode, $hdd, $cdd);
+
+        $pred = 0.0;
+        foreach ($coef as $i => $b) { $pred += $b * $row[$i]; }
+        return max(0.0, $pred);
+    }
+
+    /** Feature-Zeile (mit Achsenabschnitt 1.0) je nach Betriebsart. */
+    private function wpFeatureRow(int $mode, float $hdd, float $cdd): array
+    {
+        switch ($mode) {
+            case LFC_WP_COOL: return [1.0, $cdd];
+            case LFC_WP_BOTH: return [1.0, $hdd, $cdd];
+            case LFC_WP_HEAT:
+            default:          return [1.0, $hdd];
+        }
+    }
+
+    /**
+     * Lineare Kleinste-Quadrate-Regression über die Normalgleichungen
+     * (XᵀX)·b = Xᵀy, gelöst per Gauß-Elimination mit Teilpivotisierung.
+     * $X = Zeilen aus Features (inkl. führender 1.0). Rückgabe null bei
+     * singulärer Matrix (z.B. kein Kühlbedarf in der Historie).
+     */
+    private function fitLeastSquares(array $X, array $y)
+    {
+        $n = count($X);
+        if ($n === 0) { return null; }
+        $k = count($X[0]);
+
+        // Normalgleichungen aufbauen: A = XᵀX (k×k), g = Xᵀy (k).
+        $A = array_fill(0, $k, array_fill(0, $k, 0.0));
+        $g = array_fill(0, $k, 0.0);
+        for ($r = 0; $r < $n; $r++) {
+            for ($i = 0; $i < $k; $i++) {
+                $g[$i] += $X[$r][$i] * $y[$r];
+                for ($j = 0; $j < $k; $j++) {
+                    $A[$i][$j] += $X[$r][$i] * $X[$r][$j];
+                }
+            }
+        }
+
+        // Gauß-Elimination mit Teilpivotisierung.
+        for ($col = 0; $col < $k; $col++) {
+            $piv = $col;
+            for ($r = $col + 1; $r < $k; $r++) {
+                if (abs($A[$r][$col]) > abs($A[$piv][$col])) { $piv = $r; }
+            }
+            if (abs($A[$piv][$col]) < 1e-9) { return null; } // singulär
+            if ($piv !== $col) {
+                $tmp = $A[$piv]; $A[$piv] = $A[$col]; $A[$col] = $tmp;
+                $tg = $g[$piv]; $g[$piv] = $g[$col]; $g[$col] = $tg;
+            }
+            for ($r = 0; $r < $k; $r++) {
+                if ($r === $col) { continue; }
+                $f = $A[$r][$col] / $A[$col][$col];
+                for ($j = $col; $j < $k; $j++) { $A[$r][$j] -= $f * $A[$col][$j]; }
+                $g[$r] -= $f * $g[$col];
+            }
+        }
+
+        $b = array_fill(0, $k, 0.0);
+        for ($i = 0; $i < $k; $i++) { $b[$i] = $g[$i] / $A[$i][$i]; }
+        return $b;
     }
 
     // ----------------------------------------------------------------
