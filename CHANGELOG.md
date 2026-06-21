@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- **Fix Kachel blieb leer:** `GetVisualizationTile()` übergibt die Daten als JSON-**String**;
+  `handleMessage()` interpretierte ihn aber als bereits geparstes Objekt → kein Inhalt. `handleMessage`
+  parst den String jetzt (wie das Tibber-Kachelmodul): `typeof payload === 'string' ? JSON.parse(...)`.
+
 ## 0.3.0
 
 - **Separate Geräteprognose auf Heizen/Kühlen erweitert** (für Luft-Luft-WP/Klimaanlagen):

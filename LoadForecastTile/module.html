@@ -106,7 +106,8 @@
     <script>
         var lastData = null;
 
-        function handleMessage(data) {
+        function handleMessage(payload) {
+            var data = (typeof payload === 'string') ? JSON.parse(payload) : payload;
             if (!data) { return; }
             lastData = data;
 
