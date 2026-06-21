@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+
+- **Kachel: Hover-/Touch-Tooltip** im Diagramm. Beim Überfahren (Maus oder Touch — wichtig für
+  Wandtablets) erscheint ein Fadenkreuz mit Punkten auf P10/P50/P90 und ein Wertefeld mit Tag,
+  Uhrzeit, erwartetem Wert (P50) und Bandbereich (P10–P90).
+
 ## 0.3.1
 
 - **Fix Kachel blieb leer:** `GetVisualizationTile()` übergibt die Daten als JSON-**String**;

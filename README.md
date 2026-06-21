@@ -126,8 +126,10 @@ Das Paket enthält ein eigenständiges Kachel-Modul **LoadForecastTile** für di
 Tile-Visualisierung. Es findet die `LoadForecast`-Instanz automatisch (oder per
 Auswahl) und zeichnet das P10/P50/P90-Band der nächsten 1–3 Tage als SVG-Diagramm
 (Median-Linie + Unsicherheitsfläche, Tagestrenner, kWh je Tag, „jetzt"-Marker) —
-ohne externe Chart-Library. Akzentfarbe, Hintergrund und Schriftgröße sind
-einstellbar; Standard ist theme-konform (transparent, automatische Textfarbe).
+ohne externe Chart-Library. Beim Überfahren (Maus oder Touch) zeigt ein Tooltip
+Tag, Uhrzeit, erwarteten Wert (P50) und Bandbereich (P10–P90). Akzentfarbe,
+Hintergrund und Schriftgröße sind einstellbar; Standard ist theme-konform
+(transparent, automatische Textfarbe).
 
 ## Ausbaustufen
 
