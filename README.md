@@ -1,7 +1,7 @@
 # LoadForecast — Verbrauchsprognose für IP-Symcon
 
 Erstellt aus deinen Archivdaten eine **1–3-Tage-Verbrauchsprognose** und liefert sie
-als JSON-Profil (stündlich, P10/P50/P90) zur direkten Nutzung durch das EMS.
+als JSON-Profil (60/30/15-min-Auflösung, P10/P50/P90) zur direkten Nutzung durch das EMS.
 
 ## Konzept
 
@@ -94,10 +94,11 @@ Wettermodul — nur eine archivierte Außentemperatur genügt.
 | `Erwartung WP morgen (kWh)` | separate WP-Prognose (falls konfiguriert) |
 | `Status`, `Letzte Berechnung` | Diagnose |
 
-JSON-Struktur (stündlich, 24 Slots, Werte in **W** Ø-Leistung pro Stunde):
+JSON-Struktur (`slots`/`resolution` je nach gewählter Auflösung, Werte in **W**
+Ø-Leistung je Slot):
 
 ```json
-{ "date":"2026-06-18","slots":24,"resolution":"hourly","unit":"W",
+{ "date":"2026-06-18","slots":24,"resolution":"60min","unit":"W",
   "p10":[...],"p50":[...],"p90":[...],"mean":[...],"kwh":14.3,"neighbors":12 }
 ```
 
@@ -133,6 +134,7 @@ Hintergrund und Schriftgröße sind einstellbar; Standard ist theme-konform
 
 ## Ausbaustufen
 
-- **15-Minuten-Auflösung** (96 Slots) statt stündlich — Konstante `LFC_SLOTS` + Integration aus `AC_GetLoggedValues` (aktuell stündlich via `AC_GetAggregatedValues` für Robustheit).
-- **Regionale Feiertage** in `isHoliday()` ergänzen (aktuell bundesweite).
+- **Auflösung** 60/30/15 min wählbar (Modellparameter). 60 min nutzt das Stundenaggregat,
+  feinere Stufen integrieren aus den Rohwerten — benötigt entsprechend feine Archivierung.
+- **Regionale Feiertage** über die Bundesland-Auswahl (Modellparameter).
 - **Feature-Gewichte** in `distance()` justieren (`wDT/wDL/wHDD/wPres`).

@@ -46,9 +46,8 @@ define('LFC_DT_WORK', 0);   // Werktag (Mo–Fr, kein Feiertag)
 define('LFC_DT_SAT',  1);   // Samstag
 define('LFC_DT_SUN',  2);   // Sonntag / Feiertag
 
-// Auflösung: Slots pro Tag (24 = stündlich). Bewusst stündlich
-// gehalten — robust über AC_GetAggregatedValues (Stufe 0).
-define('LFC_SLOTS', 24);
+// Zeitliche Auflösung (Minuten je Slot). 60 = stündlich (robust über
+// AC_GetAggregatedValues), <60 = aus Rohwerten integriert (AC_GetLoggedValues).
 
 class LoadForecast extends IPSModule
 {
@@ -106,6 +105,10 @@ class LoadForecast extends IPSModule
         $this->RegisterPropertyInteger('LFC_K',              12);
         $this->RegisterPropertyFloat(  'LFC_Latitude',       49.0);
         $this->RegisterPropertyFloat(  'LFC_HDD_Base',       15.0);
+        // Zeitliche Auflösung in Minuten je Slot (60/30/15).
+        $this->RegisterPropertyInteger('LFC_Resolution',     60);
+        // Bundesland-Kürzel für regionale Feiertage ('' = nur bundesweite).
+        $this->RegisterPropertyString('LFC_State',           '');
 
         // ── Temperaturabhängige Geräte (optional, separate Prognose) ─
         // Liste je Gerät: { "PowerVar": <id>, "Mode": 0=Heizen|1=Kühlen|2=beides }.
@@ -121,7 +124,9 @@ class LoadForecast extends IPSModule
         $this->RegisterVariableFloat( 'LFC_kWhToday',     'Erwartung heute (kWh)',    '~Electricity', 40);
         $this->RegisterVariableFloat( 'LFC_kWhTomorrow',  'Erwartung morgen (kWh)',   '~Electricity', 50);
         $this->RegisterVariableFloat( 'LFC_kWhDayAfter',  'Erwartung übermorgen (kWh)','~Electricity', 60);
-        $this->RegisterVariableFloat( 'LFC_WPkWhTomorrow','Erwartung WP morgen (kWh)','~Electricity', 70);
+        $this->RegisterVariableFloat( 'LFC_WPkWhToday',   'Erwartung WP/Klima heute (kWh)',     '~Electricity', 70);
+        $this->RegisterVariableFloat( 'LFC_WPkWhTomorrow','Erwartung WP/Klima morgen (kWh)',    '~Electricity', 71);
+        $this->RegisterVariableFloat( 'LFC_WPkWhDayAfter','Erwartung WP/Klima übermorgen (kWh)','~Electricity', 72);
         $this->RegisterVariableString('LFC_Status',    'Status',                    '', 80);
         $this->RegisterVariableInteger('LFC_LastUpdate','Letzte Berechnung',        '~UnixTimestamp', 90);
 
@@ -176,10 +181,13 @@ class LoadForecast extends IPSModule
                 $this->SetValue($kwhIds[$offset], round($fc['kwh'], 2));
             }
 
-            // Optional: separate WP-Prognose (morgen)
-            $wp = $this->wpForecast(1);
-            if ($wp !== null) {
-                $this->SetValue('LFC_WPkWhTomorrow', round($wp, 2));
+            // Optional: separate WP-/Klima-Prognose für heute/morgen/übermorgen
+            $wpIds = ['LFC_WPkWhToday', 'LFC_WPkWhTomorrow', 'LFC_WPkWhDayAfter'];
+            for ($offset = 0; $offset <= 2; $offset++) {
+                $wp = $this->wpForecast($offset);
+                if ($wp !== null) {
+                    $this->SetValue($wpIds[$offset], round($wp, 2));
+                }
             }
 
             $this->SetValue('LFC_LastUpdate', time());
@@ -244,8 +252,9 @@ class LoadForecast extends IPSModule
         }
 
         // Pro Slot P10/P50/P90 und gewichteten Mittelwert bilden.
+        $slots = $this->slots();
         $p10 = []; $p50 = []; $p90 = []; $mean = [];
-        for ($s = 0; $s < LFC_SLOTS; $s++) {
+        for ($s = 0; $s < $slots; $s++) {
             $pairs = [];
             $wsum  = 0.0; $vsum = 0.0;
             foreach ($neighbors as $n) {
@@ -260,12 +269,13 @@ class LoadForecast extends IPSModule
             $p90[$s]  = $this->weightedPercentile($pairs, 0.90);
         }
 
-        $kwh = array_sum($mean) / 1000.0; // Wh → kWh (1 h pro Slot)
+        // Ø-Leistung (W) je Slot → Energie mit Slot-Dauer in Stunden.
+        $kwh = array_sum($mean) * $this->slotHours() / 1000.0;
 
         return [
             'date'      => date('Y-m-d', $targetTs),
-            'slots'     => LFC_SLOTS,
-            'resolution'=> 'hourly',
+            'slots'     => $slots,
+            'resolution'=> $this->slotMinutes() . 'min',
             'unit'      => 'W',
             'p10'       => array_map(function ($x) { return round($x, 1); }, $p10),
             'p50'       => array_map(function ($x) { return round($x, 1); }, $p50),
@@ -359,28 +369,63 @@ class LoadForecast extends IPSModule
     }
 
     /**
-     * Deutsche bundesweite Feiertage (regionale ggf. ergänzen).
+     * Deutsche Feiertage. Bundesweite immer, regionale je nach
+     * konfiguriertem Bundesland (LFC_State, '' = nur bundesweite).
      */
     private function isHoliday(int $ts)
     {
-        $y   = (int)date('Y', $ts);
-        $md  = date('m-d', $ts);
+        $y     = (int)date('Y', $ts);
+        $md    = date('m-d', $ts);
+        $ymd   = date('Y-m-d', $ts);
+        $state = strtoupper(trim($this->ReadPropertyString('LFC_State')));
 
+        // Bundesweite feste Feiertage
         $fixed = ['01-01', '05-01', '10-03', '12-25', '12-26'];
+
+        // Regionale feste Feiertage je Bundesland
+        $heiligeDreiKoenige = ['BW', 'BY', 'ST'];
+        $allerheiligen      = ['BW', 'BY', 'NW', 'RP', 'SL'];
+        $reformationstag    = ['BB', 'MV', 'SN', 'ST', 'TH', 'HB', 'HH', 'NI', 'SH'];
+        if (in_array($state, $heiligeDreiKoenige, true)) { $fixed[] = '01-06'; }
+        if (in_array($state, $allerheiligen, true))      { $fixed[] = '11-01'; }
+        if (in_array($state, $reformationstag, true))    { $fixed[] = '10-31'; }
+        if ($state === 'SL')                              { $fixed[] = '08-15'; } // Mariä Himmelfahrt
+        if ($state === 'BE')                              { $fixed[] = '03-08'; } // Frauentag
+        if ($state === 'MV')                              { $fixed[] = '03-08'; }
+        if ($state === 'TH')                              { $fixed[] = '09-20'; } // Weltkindertag
+
         if (in_array($md, $fixed, true)) { return true; }
 
-        // Osterbasierte Feiertage
-        $easter = easter_date($y); // Ostersonntag (Mittag)
+        // Bundesweite osterbasierte Feiertage
+        $easter  = easter_date($y); // Ostersonntag (Mittag)
         $movable = [
             strtotime('-2 days', $easter),  // Karfreitag
             strtotime('+1 day',  $easter),  // Ostermontag
-            strtotime('+39 days',$easter),  // Christi Himmelfahrt
-            strtotime('+50 days',$easter),  // Pfingstmontag
+            strtotime('+39 days', $easter), // Christi Himmelfahrt
+            strtotime('+50 days', $easter), // Pfingstmontag
         ];
-        foreach ($movable as $m) {
-            if (date('Y-m-d', $m) === date('Y-m-d', $ts)) { return true; }
+        // Fronleichnam (Ostern +60) — regional
+        $fronleichnam = ['BW', 'BY', 'HE', 'NW', 'RP', 'SL'];
+        if (in_array($state, $fronleichnam, true)) {
+            $movable[] = strtotime('+60 days', $easter);
         }
+        foreach ($movable as $m) {
+            if (date('Y-m-d', $m) === $ymd) { return true; }
+        }
+
+        // Buß- und Bettag (Mittwoch vor dem 23.11.) — nur Sachsen
+        if ($state === 'SN' && $ymd === $this->bussUndBettag($y)) { return true; }
+
         return false;
+    }
+
+    /** Buß- und Bettag: Mittwoch vor dem 23. November. */
+    private function bussUndBettag(int $y): string
+    {
+        $ref = strtotime($y . '-11-23');
+        $dow = (int)date('w', $ref);           // 0=So … 3=Mi
+        $back = ($dow >= 3) ? ($dow - 3) : ($dow + 4);
+        return date('Y-m-d', strtotime("-{$back} days", $ref));
     }
 
     // ----------------------------------------------------------------
@@ -388,14 +433,15 @@ class LoadForecast extends IPSModule
     // ----------------------------------------------------------------
 
     /**
-     * Stundenprofil (LFC_SLOTS Werte, Ø-Leistung in W) eines Tages.
+     * Tagesprofil (slots() Werte, Ø-Leistung in W) eines Tages.
      * Zieht optional konfigurierte Verbraucher (WP, Wallbox) ab,
      * sodass die planbare Grundlast übrig bleibt.
      * Rückgabe null, wenn der Tag kaum Daten hat.
      */
     private function getDayProfile(int $ts)
     {
-        $main = $this->hourlyProfile($this->ReadPropertyInteger('VAR_Consumption'), $ts);
+        $slots = $this->slots();
+        $main = $this->dayProfile($this->ReadPropertyInteger('VAR_Consumption'), $ts);
         if ($main === null) { return null; }
 
         $excludes = json_decode($this->ReadPropertyString('ExcludeVars'), true);
@@ -403,9 +449,9 @@ class LoadForecast extends IPSModule
             foreach ($excludes as $row) {
                 $vid = isset($row['VariableID']) ? (int)$row['VariableID'] : 0;
                 if ($vid <= 0) { continue; }
-                $sub = $this->hourlyProfile($vid, $ts);
+                $sub = $this->dayProfile($vid, $ts);
                 if ($sub === null) { continue; }
-                for ($s = 0; $s < LFC_SLOTS; $s++) {
+                for ($s = 0; $s < $slots; $s++) {
                     $main[$s] = max(0.0, $main[$s] - $sub[$s]);
                 }
             }
@@ -414,37 +460,100 @@ class LoadForecast extends IPSModule
     }
 
     /**
-     * Stündliche Ø-Leistung (W) einer Variablen für einen Tag.
+     * Ø-Leistung (W) je Slot einer Variablen für einen Tag.
+     * 60 min: schnell über AC_GetAggregatedValues (Stundenaggregat).
+     * <60 min: zeitgewichtet aus den Rohwerten (AC_GetLoggedValues).
      * Erwartet eine LEISTUNGS-Variable (W). Rückgabe null bei
      * unzureichender Datenlage (< halber Tag belegt).
      */
-    private function hourlyProfile(int $varID, int $ts)
+    private function dayProfile(int $varID, int $ts)
     {
         if ($varID <= 0 || !IPS_VariableExists($varID)) { return null; }
         $aid = $this->getArchiveID();
         if ($aid === 0) { return null; }
 
+        $slots = $this->slots();
         $start = strtotime('today', $ts);
         $end   = $start + 86400 - 1;
 
-        $rows = AC_GetAggregatedValues($aid, $varID, 0 /* stündlich */, $start, $end, 0);
-        if (!is_array($rows) || count($rows) === 0) { return null; }
+        if ($this->slotMinutes() === 60) {
+            $profile = array_fill(0, $slots, null);
+            $rows = AC_GetAggregatedValues($aid, $varID, 0 /* stündlich */, $start, $end, 0);
+            if (!is_array($rows) || count($rows) === 0) { return null; }
+            foreach ($rows as $r) {
+                $h = (int)date('G', $r['TimeStamp']);
+                if ($h >= 0 && $h < $slots) { $profile[$h] = (float)$r['Avg']; }
+            }
+            return $this->finishProfile($profile, $slots);
+        }
 
-        $profile = array_fill(0, LFC_SLOTS, null);
+        return $this->integratedProfile($aid, $varID, $start, $end, $slots);
+    }
+
+    /**
+     * Zeitgewichtetes Slot-Profil aus den Rohwerten. Jeder geloggte Wert
+     * gilt bis zum nächsten Wechsel; die Leistung wird über die Slots
+     * integriert (Ø-Leistung = Σ v·Δt / Σ Δt je Slot).
+     */
+    private function integratedProfile(int $aid, int $varID, int $start, int $end, int $slots)
+    {
+        $slotSec = 86400.0 / $slots;
+
+        // Wert, der zu Tagesbeginn aktiv ist (letzter Wechsel davor).
+        $carry = null;
+        $pre = AC_GetLoggedValues($aid, $varID, 0, $start - 1, 1);
+        if (is_array($pre) && count($pre) > 0) { $carry = (float)$pre[0]['Value']; }
+
+        $rows = AC_GetLoggedValues($aid, $varID, $start, $end, 0);
+        if (!is_array($rows)) { $rows = []; }
+        usort($rows, function ($a, $b) { return $a['TimeStamp'] <=> $b['TimeStamp']; });
+
+        // Zeitachse aufbauen: (Zeit, Wert) ab Tagesbeginn.
+        $points = [];
+        $first  = ($carry !== null) ? $carry : (count($rows) > 0 ? (float)$rows[0]['Value'] : null);
+        $points[] = ['t' => $start, 'v' => $first];
         foreach ($rows as $r) {
-            $h = (int)date('G', $r['TimeStamp']);
-            if ($h >= 0 && $h < LFC_SLOTS) {
-                $profile[$h] = (float)$r['Avg'];
+            $t = (int)$r['TimeStamp'];
+            if ($t > $start && $t <= $end) { $points[] = ['t' => $t, 'v' => (float)$r['Value']]; }
+        }
+        if ($first === null && count($points) <= 1) { return null; }
+
+        $sumW   = array_fill(0, $slots, 0.0);
+        $sumSec = array_fill(0, $slots, 0.0);
+        $cnt    = count($points);
+        for ($p = 0; $p < $cnt; $p++) {
+            $v  = $points[$p]['v'];
+            if ($v === null) { continue; }
+            $t0 = $points[$p]['t'];
+            $t1 = ($p + 1 < $cnt) ? $points[$p + 1]['t'] : ($end + 1);
+            while ($t0 < $t1) {
+                $slot    = (int)(($t0 - $start) / $slotSec);
+                if ($slot < 0 || $slot >= $slots) { break; }
+                $slotEnd = $start + ($slot + 1) * $slotSec;
+                $segEnd  = min($t1, $slotEnd);
+                $dur     = $segEnd - $t0;
+                $sumW[$slot]   += $v * $dur;
+                $sumSec[$slot] += $dur;
+                $t0 = $segEnd;
             }
         }
 
-        // Lücken füllen (Nachbarinterpolation) und Mindestabdeckung prüfen.
+        $profile = array_fill(0, $slots, null);
+        for ($s = 0; $s < $slots; $s++) {
+            if ($sumSec[$s] > 0) { $profile[$s] = $sumW[$s] / $sumSec[$s]; }
+        }
+        return $this->finishProfile($profile, $slots);
+    }
+
+    /** Mindestabdeckung prüfen und Lücken per Nachbarwert füllen. */
+    private function finishProfile(array $profile, int $slots)
+    {
         $have = 0;
         foreach ($profile as $v) { if ($v !== null) { $have++; } }
-        if ($have < LFC_SLOTS / 2) { return null; }
+        if ($have < $slots / 2) { return null; }
 
         $last = 0.0;
-        for ($s = 0; $s < LFC_SLOTS; $s++) {
+        for ($s = 0; $s < $slots; $s++) {
             if ($profile[$s] === null) { $profile[$s] = $last; }
             else { $last = $profile[$s]; }
         }
@@ -473,6 +582,25 @@ class LoadForecast extends IPSModule
     {
         $ids = IPS_GetInstanceListByModuleID(LFC_ARCHIVE_GUID);
         return (count($ids) > 0) ? $ids[0] : 0;
+    }
+
+    /** Minuten je Slot (60, 30 oder 15). */
+    private function slotMinutes(): int
+    {
+        $m = $this->ReadPropertyInteger('LFC_Resolution');
+        return in_array($m, [15, 30, 60], true) ? $m : 60;
+    }
+
+    /** Anzahl Slots pro Tag (24, 48 oder 96). */
+    private function slots(): int
+    {
+        return (int)(1440 / $this->slotMinutes());
+    }
+
+    /** Dauer eines Slots in Stunden (für die Energie-/kWh-Rechnung). */
+    private function slotHours(): float
+    {
+        return $this->slotMinutes() / 60.0;
     }
 
     // ----------------------------------------------------------------
@@ -719,14 +847,14 @@ class LoadForecast extends IPSModule
         $X = []; $y = [];
         for ($d = 1; $d <= $lookback; $d++) {
             $ts   = strtotime('today -' . $d . ' days');
-            $prof = $this->hourlyProfile($vid, $ts);
+            $prof = $this->dayProfile($vid, $ts);
             $temp = $this->dailyMean($this->ReadPropertyInteger('VAR_TempHistory'), $ts);
             if ($prof === null || $temp === null) { continue; }
 
             $hdd = max(0.0, $hBase - $temp);
             $cdd = max(0.0, $temp - $cBase);
             $X[] = $this->wpFeatureRow($mode, $hdd, $cdd);
-            $y[] = array_sum($prof) / 1000.0;
+            $y[] = array_sum($prof) * $this->slotHours() / 1000.0;
         }
 
         $need = ($mode === LFC_WP_BOTH) ? 20 : 10;
@@ -832,11 +960,12 @@ class LoadForecast extends IPSModule
 
     private function emptyForecast(int $ts)
     {
-        $zeros = array_fill(0, LFC_SLOTS, 0.0);
+        $slots = $this->slots();
+        $zeros = array_fill(0, $slots, 0.0);
         return [
             'date'      => date('Y-m-d', $ts),
-            'slots'     => LFC_SLOTS,
-            'resolution'=> 'hourly',
+            'slots'     => $slots,
+            'resolution'=> $this->slotMinutes() . 'min',
             'unit'      => 'W',
             'p10' => $zeros, 'p50' => $zeros, 'p90' => $zeros, 'mean' => $zeros,
             'kwh' => 0.0, 'neighbors' => 0,

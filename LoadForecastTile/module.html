@@ -159,6 +159,8 @@
             return (Math.round(v * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d);
         }
 
+        function pad(x) { return (x < 10 ? '0' : '') + x; }
+
         function render() {
             var data = lastData;
             var chart = document.getElementById('chart');
@@ -236,13 +238,18 @@
             for (var i = 0; i < n; i++) { line += (i ? ' L' : 'M') + ' ' + fmt(x(i), 1) + ',' + fmt(y(p50[i]), 1); }
             svg += '<path d="' + line + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
 
-            // „jetzt"-Marker (erster Tag = heute, Stundenindex = aktuelle Stunde)
+            // Auflösung: Minuten je Slot (aus der Slot-Anzahl des ersten Tags)
+            var spd = data.days[0] ? data.days[0].p50.length : 24;
+            var mps = 1440 / spd;
+
+            // „jetzt"-Marker (erster Tag = heute), minutengenau
             if (data.days[0] && data.days[0].label === 'heute') {
-                var hNow = new Date().getHours();
-                if (hNow >= 0 && hNow < (data.days[0].p50.length)) {
-                    var xn = x(hNow);
+                var now = new Date();
+                var idxNow = Math.floor((now.getHours() * 60 + now.getMinutes()) / mps);
+                if (idxNow >= 0 && idxNow < spd) {
+                    var xn = x(idxNow);
                     svg += '<line x1="' + fmt(xn, 1) + '" y1="' + mT + '" x2="' + fmt(xn, 1) + '" y2="' + (mT + ph) + '" stroke="var(--accent)" stroke-width="1" stroke-dasharray="3 3" opacity="0.8"/>';
-                    svg += '<circle cx="' + fmt(xn, 1) + '" cy="' + fmt(y(p50[hNow]), 1) + '" r="3" fill="var(--accent)"/>';
+                    svg += '<circle cx="' + fmt(xn, 1) + '" cy="' + fmt(y(p50[idxNow]), 1) + '" r="3" fill="var(--accent)"/>';
                 }
             }
 
@@ -261,7 +268,7 @@
             G = {
                 W: W, mL: mL, pw: pw, n: n,
                 x: x, y: y, p10: p10, p50: p50, p90: p90,
-                bounds: bounds, days: data.days,
+                bounds: bounds, days: data.days, mps: mps,
                 hv: chart.querySelector('#hv'),
                 hvline: chart.querySelector('#hvline'),
                 hv10: chart.querySelector('#hv10'),
@@ -309,10 +316,11 @@
             // Tag + Stunde bestimmen
             var di = 0;
             for (var b = 0; b < G.bounds.length; b++) { if (i >= G.bounds[b]) { di = b; } }
-            var hour = i - G.bounds[di];
+            var slotInDay = i - G.bounds[di];
+            var tMin = Math.round(slotInDay * G.mps);
             var label = G.days[di].label;
             label = label.charAt(0).toUpperCase() + label.slice(1);
-            var hh = (hour < 10 ? '0' : '') + hour + ':00';
+            var hh = pad(Math.floor(tMin / 60)) + ':' + pad(tMin % 60);
 
             tipEl.innerHTML =
                 '<div class="tip-h">' + label + ' ' + hh + '</div>' +

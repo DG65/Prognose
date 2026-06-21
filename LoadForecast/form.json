@@ -220,6 +220,44 @@
                     "caption": "Heizgrenztemperatur (Basis für Heizgrad)",
                     "digits": 1,
                     "suffix": " °C"
+                },
+                {
+                    "type": "Select",
+                    "name": "LFC_Resolution",
+                    "caption": "Zeitliche Auflösung",
+                    "options": [
+                        { "caption": "60 Minuten (24 Slots, robust)",      "value": 60 },
+                        { "caption": "30 Minuten (48 Slots)",              "value": 30 },
+                        { "caption": "15 Minuten (96 Slots, Viertelstunde)","value": 15 }
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "caption": "Hinweis: 30/15 min werden aus den Rohwerten integriert und brauchen entsprechend feine Archivierung über den Historie-Zeitraum. Für ältere Tage ohne Rohdaten fällt die Abdeckung weg (Tag wird übersprungen). 60 min nutzt das robuste Stundenaggregat."
+                },
+                {
+                    "type": "Select",
+                    "name": "LFC_State",
+                    "caption": "Bundesland (für regionale Feiertage)",
+                    "options": [
+                        { "caption": "— nur bundesweite —",        "value": "" },
+                        { "caption": "Baden-Württemberg",          "value": "BW" },
+                        { "caption": "Bayern",                     "value": "BY" },
+                        { "caption": "Berlin",                     "value": "BE" },
+                        { "caption": "Brandenburg",                "value": "BB" },
+                        { "caption": "Bremen",                     "value": "HB" },
+                        { "caption": "Hamburg",                    "value": "HH" },
+                        { "caption": "Hessen",                     "value": "HE" },
+                        { "caption": "Mecklenburg-Vorpommern",     "value": "MV" },
+                        { "caption": "Niedersachsen",              "value": "NI" },
+                        { "caption": "Nordrhein-Westfalen",        "value": "NW" },
+                        { "caption": "Rheinland-Pfalz",            "value": "RP" },
+                        { "caption": "Saarland",                   "value": "SL" },
+                        { "caption": "Sachsen",                    "value": "SN" },
+                        { "caption": "Sachsen-Anhalt",             "value": "ST" },
+                        { "caption": "Schleswig-Holstein",         "value": "SH" },
+                        { "caption": "Thüringen",                  "value": "TH" }
+                    ]
                 }
             ]
         },

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0
+
+- **Wählbare zeitliche Auflösung** (60 / 30 / 15 Minuten, Modellparameter). 60 min nutzt weiterhin
+  das robuste Stundenaggregat; 30/15 min werden zeitgewichtet aus den Rohwerten integriert
+  (`AC_GetLoggedValues`). Slots, Profile, Perzentile und kWh rechnen jetzt durchgängig mit der
+  Slot-Dauer. Hinweis: feinere Auflösung braucht entsprechend feine Archivierung über den
+  Historie-Zeitraum; Tage ohne Rohdaten werden übersprungen.
+- **Regionale Feiertage**: Auswahl des Bundeslands (Modellparameter). Zusätzlich zu den bundesweiten
+  Feiertagen werden die landesspezifischen berücksichtigt (Heilige Drei Könige, Fronleichnam,
+  Mariä Himmelfahrt, Reformationstag, Allerheiligen, Buß- und Bettag, Frauentag, Weltkindertag).
+  Verbessert die Tagtyp-Zuordnung und damit die Ähnliche-Tage-Suche.
+- **Separate Geräteprognose jetzt für heute/morgen/übermorgen** (`LFC_WPkWhToday/Tomorrow/DayAfter`)
+  statt nur morgen. Variablen umbenannt auf „WP/Klima".
+- Die Kachel ist resolutionsunabhängig: Tooltip-Uhrzeit und „jetzt"-Marker rechnen minutengenau aus
+  der Slot-Anzahl (z.B. „Morgen 18:15" bei 15-min-Auflösung).
+
 ## 0.3.2
 
 - **Kachel: Hover-/Touch-Tooltip** im Diagramm. Beim Überfahren (Maus oder Touch — wichtig für
