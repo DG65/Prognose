@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.2
+
+- **Kachel-Layout:** mehr Abstand oben zum (IPS-)Titel, Legende sitzt in einem eigenen Streifen mit
+  Abstand zum Diagramm (nicht mehr überlappend), und die **Diagrammhöhe ist einstellbar**
+  (`ChartHeight`, Standard 360 px, 180–800).
+
 ## 0.11.1
 
 - **Fix Highcharts-Kachel verschwand nach ~10–20 s**: Bei jeder Live-Aktualisierung wurde der

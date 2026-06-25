@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <style>
         html, body { margin: 0; height: 100%; background: transparent; }
-        .wrap { box-sizing: border-box; padding: 42px 6px 6px; }
-        #chart { width: 100%; height: 300px; }
+        .wrap { box-sizing: border-box; padding: 56px 6px 10px; }
+        #chart { width: 100%; height: 360px; }
         .empty { color: #8a97a3; font-size: 13px; padding: 24px 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     </style>
     <script src="https://code.highcharts.com/highcharts.js"></script>
@@ -43,6 +43,9 @@
                 el.innerHTML = '<div class="empty">' + ((data && data.message) || 'Keine Daten') + '</div>';
                 return;
             }
+
+            var height = (data.height && data.height >= 180) ? data.height : 360;
+            el.style.height = height + 'px';
 
             var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
             var TEXT = dark ? '#e8edf2' : '#1b2430';
@@ -119,9 +122,9 @@
             for (var t = 0; t < nDays; t++) { ticks.push(t * 24 + 12); }
 
             var options = {
-                chart: { backgroundColor: data.bg ? data.bg : 'transparent', height: 300, spacing: [6, 8, 2, 6], style: { fontFamily: data.font || 'sans-serif' }, animation: false },
+                chart: { backgroundColor: data.bg ? data.bg : 'transparent', height: height, spacing: [10, 8, 2, 6], style: { fontFamily: data.font || 'sans-serif' }, animation: false },
                 title: { text: undefined }, credits: { enabled: false }, exporting: { enabled: false },
-                legend: { enabled: true, align: 'right', verticalAlign: 'top', floating: true, x: -4, y: -8, useHTML: true, symbolRadius: 6, itemStyle: { color: TEXT, fontSize: fpx(11), fontWeight: '400' }, itemHoverStyle: { color: TEXT }, labelFormatter: function () {
+                legend: { enabled: true, align: 'right', verticalAlign: 'top', floating: false, margin: 16, padding: 0, x: -2, y: 0, useHTML: true, symbolRadius: 6, itemStyle: { color: TEXT, fontSize: fpx(11), fontWeight: '400' }, itemHoverStyle: { color: TEXT }, labelFormatter: function () {
                     var ex = '';
                     if (this.userOptions.id === 'pv' && data.actualPV != null) { ex = ' · jetzt <b>' + kw(data.actualPV) + ' kW</b>'; }
                     if (this.userOptions.id === 'load' && data.actualLoad != null) { ex = ' · jetzt <b>' + kw(data.actualLoad) + ' kW</b>'; }

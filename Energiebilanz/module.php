@@ -27,6 +27,7 @@ class Energiebilanz extends IPSModule
     private const DEF_GRID   = true;
     private const DEF_YMAX   = 0.0; // 0 = automatisch
     private const DEF_FONT   = 'system';
+    private const DEF_HEIGHT = 360;
 
     public function Create()
     {
@@ -59,6 +60,7 @@ class Energiebilanz extends IPSModule
         $this->RegisterPropertyBoolean('ShowGrid',   self::DEF_GRID);
         $this->RegisterPropertyFloat('YMaxManual',   self::DEF_YMAX);
         $this->RegisterPropertyString('FontFamily',  self::DEF_FONT);
+        $this->RegisterPropertyInteger('ChartHeight', self::DEF_HEIGHT);
 
         $this->SetVisualizationType(1);
     }
@@ -135,6 +137,7 @@ class Energiebilanz extends IPSModule
         $this->UpdateFormField('ShowGrid', 'value', self::DEF_GRID);
         $this->UpdateFormField('YMaxManual', 'value', self::DEF_YMAX);
         $this->UpdateFormField('FontFamily', 'value', self::DEF_FONT);
+        $this->UpdateFormField('ChartHeight', 'value', self::DEF_HEIGHT);
     }
 
     public function GetVisualizationTile()
@@ -160,6 +163,7 @@ class Energiebilanz extends IPSModule
             'showGrid'  => $this->ReadPropertyBoolean('ShowGrid'),
             'yMaxManual'=> max(0.0, $this->ReadPropertyFloat('YMaxManual')),
             'font'      => $this->FontStack($this->ReadPropertyString('FontFamily')),
+            'height'    => max(180, $this->ReadPropertyInteger('ChartHeight')),
         ];
 
         $limit = max(1, min(3, $this->ReadPropertyInteger('Days')));

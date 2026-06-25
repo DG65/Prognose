@@ -125,6 +125,14 @@
                 },
                 {
                     "type": "NumberSpinner",
+                    "name": "ChartHeight",
+                    "caption": "Diagrammhöhe",
+                    "minimum": 180,
+                    "maximum": 800,
+                    "suffix": " px"
+                },
+                {
+                    "type": "NumberSpinner",
                     "name": "LineWidth",
                     "caption": "Linienstärke",
                     "digits": 1,
