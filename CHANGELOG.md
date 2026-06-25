@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0
+
+- **Gemessener Tagesverlauf als Overlay** in der Energiebilanz-Kachel: der heutige Ist-Verlauf von
+  PV und Verbrauch wird als gestrichelte Linie über die Prognose gelegt (aus dem Archiv, stündlich
+  aufs Prognoseraster gebracht) — Prognose gegen Realität über den ganzen Tag. Je Reihe per Schalter
+  ein-/ausschaltbar (`ShowActualPV` / `ShowActualLoad`).
+- **Ein-/Ausblenden direkt im WebFront**: Klick auf einen Legendeneintrag blendet die jeweilige Reihe
+  (inkl. Band, Ist-Linie und kWh) live aus bzw. ein; ausgeblendete Reihe wird gedimmt. Die Achse
+  skaliert auf die sichtbaren Reihen.
+
 ## 0.8.0
 
 - **Ist-Werte in der Energiebilanz-Kachel**: optionale Variablen „Ist-PV-Leistung (W)" und

@@ -175,7 +175,10 @@ anzeigen"** lässt sich dieselbe Kachel als kombinierte, reine PV- oder reine Ve
 nutzen. Hover/Touch zeigt PV-Wert, Verbrauch und **Saldo** zur jeweiligen Uhrzeit.
 
 Optional lassen sich **Ist-Werte** anbinden (momentane PV-Leistung und Hauslast in W): sie erscheinen
-live in der Legende und als Punkt auf der „jetzt"-Linie — Prognose gegen Realität auf einen Blick.
+live in der Legende und als Punkt auf der „jetzt"-Linie. Zusätzlich kann der **gemessene Tagesverlauf
+(heute)** als gestrichelte Linie über die Prognose gelegt werden — Prognose gegen Realität über den
+ganzen Tag. Im WebFront blendet ein **Klick auf einen Legendeneintrag** die jeweilige Reihe live
+aus/ein.
 
 Konfigurierbar: kWh je Tag (2 Nachkommastellen), Linienstärke, Kurvenglättung, Unsicherheitsband
 (ein/aus + Transparenz), Gitter/Achsen, Y-Achse manuell, Farben und Schriftgröße; Standard ist

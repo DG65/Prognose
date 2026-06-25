@@ -48,6 +48,21 @@
             "caption": "Ist-Hausverbrauch (W)"
         },
         {
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "CheckBox",
+                    "name": "ShowActualPV",
+                    "caption": "Gemessenen PV-Tagesverlauf (heute) als Linie zeigen"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "ShowActualLoad",
+                    "caption": "Gemessenen Verbrauchs-Tagesverlauf (heute) als Linie zeigen"
+                }
+            ]
+        },
+        {
             "type": "Select",
             "name": "Days",
             "caption": "Anzuzeigende Tage",

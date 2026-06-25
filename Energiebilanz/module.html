@@ -65,6 +65,9 @@
 
     <script>
         var lastData = null, G = null, tipEl = null, hoverBound = false;
+        var userHide = { pv: false, load: false };
+
+        function toggleSeries(which) { userHide[which] = !userHide[which]; render(); }
 
         function handleMessage(payload) {
             var data = (typeof payload === 'string') ? JSON.parse(payload) : payload;
@@ -115,22 +118,29 @@
                 gdays.push({ label: d.label, pv: pv, load: ld });
             });
 
-            // Legende = Farbschlüssel + (falls vorhanden) momentaner Ist-Wert
+            // Legende = klickbarer Farbschlüssel (im WebFront aus-/einblenden)
+            // + (falls vorhanden) momentaner Ist-Wert. Ausgeblendete Reihe wird gedimmt.
             if (pvAny) {
                 var lpv = 'PV';
                 if (data.actualPV != null) { lpv += ' · jetzt <b>' + fmt(data.actualPV / 1000, 2) + ' kW</b>'; }
-                legend.innerHTML += '<span class="lg"><span class="sw" style="background:var(--pv)"></span>' + lpv + '</span>';
+                var opv = userHide.pv ? 0.4 : 1;
+                legend.innerHTML += '<span class="lg" onclick="toggleSeries(\'pv\')" title="Klick: aus-/einblenden" style="cursor:pointer;opacity:' + opv + '"><span class="sw" style="background:var(--pv)"></span>' + lpv + '</span>';
             }
             if (loadAny) {
                 var lld = 'Verbrauch';
                 if (data.actualLoad != null) { lld += ' · jetzt <b>' + fmt(data.actualLoad / 1000, 2) + ' kW</b>'; }
-                legend.innerHTML += '<span class="lg"><span class="sw" style="background:var(--load)"></span>' + lld + '</span>';
+                var old = userHide.load ? 0.4 : 1;
+                legend.innerHTML += '<span class="lg" onclick="toggleSeries(\'load\')" title="Klick: aus-/einblenden" style="cursor:pointer;opacity:' + old + '"><span class="sw" style="background:var(--load)"></span>' + lld + '</span>';
             }
 
-            // gemeinsames yMax (oder manuell vorgegeben)
+            // Laufzeit-Sichtbarkeit (Klick im WebFront)
+            var visPV = pvAny && !userHide.pv;
+            var visLoad = loadAny && !userHide.load;
+
+            // gemeinsames yMax (nur sichtbare Reihen, oder manuell vorgegeben)
             var max = 0;
             gdays.forEach(function (g) {
-                [g.pv, g.load].forEach(function (s) {
+                [visPV ? g.pv : null, visLoad ? g.load : null].forEach(function (s) {
                     if (s) { s.p90.forEach(function (v) { if (v > max) { max = v; } }); }
                 });
             });
@@ -162,10 +172,12 @@
                 }
                 var kx = mL + (d + 0.5) * dayW;
                 svg += '<text x="' + fmt(kx, 1) + '" y="' + (H - 24) + '" text-anchor="middle" font-size="11" fill="var(--textmuted)">' + gdays[d].label + '</text>';
+                var pvd = visPV ? gdays[d].pv : null;
+                var ldd = visLoad ? gdays[d].load : null;
                 var parts = '';
-                if (gdays[d].pv) { parts += '<tspan fill="var(--pv)">' + fmt(gdays[d].pv.kwh, 2) + '</tspan>'; }
-                if (gdays[d].pv && gdays[d].load) { parts += '<tspan fill="var(--textmuted)"> · </tspan>'; }
-                if (gdays[d].load) { parts += '<tspan fill="var(--load)">' + fmt(gdays[d].load.kwh, 2) + '</tspan>'; }
+                if (pvd) { parts += '<tspan fill="var(--pv)">' + fmt(pvd.kwh, 2) + '</tspan>'; }
+                if (pvd && ldd) { parts += '<tspan fill="var(--textmuted)"> · </tspan>'; }
+                if (ldd) { parts += '<tspan fill="var(--load)">' + fmt(ldd.kwh, 2) + '</tspan>'; }
                 if (parts) { parts += '<tspan fill="var(--textmuted)"> kWh</tspan>'; }
                 svg += '<text x="' + fmt(kx, 1) + '" y="' + (H - 9) + '" text-anchor="middle" font-size="10">' + parts + '</text>';
             }
@@ -212,13 +224,26 @@
                 return out;
             }
             for (var d = 0; d < nDays; d++) {
-                svg += series(d, gdays[d].pv, 'var(--pv)');
-                svg += series(d, gdays[d].load, 'var(--load)');
+                svg += series(d, visPV ? gdays[d].pv : null, 'var(--pv)');
+                svg += series(d, visLoad ? gdays[d].load : null, 'var(--load)');
             }
+
+            // Gemessener Tagesverlauf (heute) als gestrichelte Overlay-Linie
+            function overlay(arr, colorVar) {
+                if (!arr) { return ''; }
+                var m = arr.length, pts = [];
+                for (var i = 0; i < m; i++) { if (arr[i] != null) { pts.push([xs(0, i, m), y(arr[i] / 1000)]); } }
+                if (pts.length < 2) { return ''; }
+                return '<path d="M ' + fmt(pts[0][0], 1) + ',' + fmt(pts[0][1], 1) + cmds(pts)
+                     + '" fill="none" stroke="' + colorVar + '" stroke-width="' + Math.max(1, opt.lw - 0.5)
+                     + '" stroke-dasharray="2 3" stroke-linecap="round" stroke-linejoin="round"/>';
+            }
+            if (visPV) { svg += overlay(data.measuredPV, 'var(--pv)'); }
+            if (visLoad) { svg += overlay(data.measuredLoad, 'var(--load)'); }
 
             // „jetzt"-Marker (Tag 0 = heute) + Ist-Werte als Punkt auf der Linie
             if (gdays[0].label === 'heute') {
-                var ref = gdays[0].pv || gdays[0].load;
+                var ref = (visPV ? gdays[0].pv : null) || (visLoad ? gdays[0].load : null);
                 if (ref) {
                     var m0 = ref.p50.length;
                     var now = new Date();
@@ -231,8 +256,8 @@
                             var yy = Math.max(mT, Math.min(mT + ph, y(valW / 1000)));
                             svg += '<circle cx="' + fmt(xn, 1) + '" cy="' + fmt(yy, 1) + '" r="4.5" fill="' + colorVar + '" stroke="var(--tip-bg)" stroke-width="1.5"/>';
                         };
-                        if (gdays[0].pv) { actDot(data.actualPV, 'var(--pv)'); }
-                        if (gdays[0].load) { actDot(data.actualLoad, 'var(--load)'); }
+                        if (visPV && gdays[0].pv) { actDot(data.actualPV, 'var(--pv)'); }
+                        if (visLoad && gdays[0].load) { actDot(data.actualLoad, 'var(--load)'); }
                     }
                 }
             }
@@ -248,7 +273,7 @@
             chart.innerHTML = svg;
 
             G = { W: W, mL: mL, mT: mT, ph: ph, dayW: dayW, nDays: nDays, yMax: yMax,
-                  y: y, xs: xs, days: gdays,
+                  y: y, xs: xs, days: gdays, pvVisible: visPV, loadVisible: visLoad,
                   hv: chart.querySelector('#hv'), hvline: chart.querySelector('#hvline'),
                   hvpv: chart.querySelector('#hvpv'), hvload: chart.querySelector('#hvload') };
             ensureTip();
@@ -281,7 +306,9 @@
             frac = Math.max(0, Math.min(1, frac));
 
             var day = G.days[d];
-            var ref = day.pv || day.load;
+            var dpv = G.pvVisible ? day.pv : null;
+            var dload = G.loadVisible ? day.load : null;
+            var ref = dpv || dload;
             if (!ref) { return; }
             var mRef = ref.p50.length;
             var slotIdx = Math.round(frac * (mRef - 1));
@@ -302,8 +329,8 @@
                 rows += '<div><b style="color:' + colorName + '">' + fmt(v, 2) + ' kW</b> ' + name + '</div>';
                 return v;
             }
-            var pvV = place(G.hvpv, day.pv, 'var(--pv)', 'PV');
-            var loadV = place(G.hvload, day.load, 'var(--load)', 'Verbrauch');
+            var pvV = place(G.hvpv, dpv, 'var(--pv)', 'PV');
+            var loadV = place(G.hvload, dload, 'var(--load)', 'Verbrauch');
             G.hv.style.display = '';
 
             var label = day.label.charAt(0).toUpperCase() + day.label.slice(1);

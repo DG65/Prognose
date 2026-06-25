@@ -38,6 +38,9 @@ class Energiebilanz extends IPSModule
         // Ist-Werte (momentane Leistung in W) — optional, für Prognose vs. Realität.
         $this->RegisterPropertyInteger('ActualPV',   0);
         $this->RegisterPropertyInteger('ActualLoad', 0);
+        // Gemessenen Tagesverlauf (heute) als Overlay-Linie zeichnen.
+        $this->RegisterPropertyBoolean('ShowActualPV',   false);
+        $this->RegisterPropertyBoolean('ShowActualLoad', false);
         $this->RegisterPropertyInteger('Days',       self::DEF_DAYS);
         $this->RegisterPropertyInteger('ColorPV',    self::DEF_PV);
         $this->RegisterPropertyInteger('ColorLoad',  self::DEF_LOAD);
@@ -176,12 +179,24 @@ class Energiebilanz extends IPSModule
         $actualPV   = $showPV   ? $this->readActual('ActualPV')   : null;
         $actualLoad = $showLoad ? $this->readActual('ActualLoad') : null;
 
+        // Gemessener Tagesverlauf (heute) als Overlay — auf das Slot-Raster
+        // des jeweiligen Tag-0-Prognoseprofils gebracht.
+        $measuredPV = null; $measuredLoad = null;
+        if ($showPV && $this->ReadPropertyBoolean('ShowActualPV') && ($days[0]['pv'] ?? null) !== null) {
+            $measuredPV = $this->readMeasured($this->ReadPropertyInteger('ActualPV'), count($days[0]['pv']['p50']));
+        }
+        if ($showLoad && $this->ReadPropertyBoolean('ShowActualLoad') && ($days[0]['load'] ?? null) !== null) {
+            $measuredLoad = $this->readMeasured($this->ReadPropertyInteger('ActualLoad'), count($days[0]['load']['p50']));
+        }
+
         return json_encode(array_merge($style, [
-            'hasData'    => $hasData,
-            'message'    => $hasData ? '' : 'Keine Prognosedaten',
-            'days'       => $days,
-            'actualPV'   => $actualPV,
-            'actualLoad' => $actualLoad,
+            'hasData'      => $hasData,
+            'message'      => $hasData ? '' : 'Keine Prognosedaten',
+            'days'         => $days,
+            'actualPV'     => $actualPV,
+            'actualLoad'   => $actualLoad,
+            'measuredPV'   => $measuredPV,
+            'measuredLoad' => $measuredLoad,
         ]));
     }
 
@@ -211,6 +226,43 @@ class Energiebilanz extends IPSModule
         $vid = $this->ReadPropertyInteger($prop);
         if ($vid <= 0 || !IPS_VariableExists($vid)) { return null; }
         return (float) GetValue($vid);
+    }
+
+    /**
+     * Gemessener Tagesverlauf (heute) einer Leistungsvariablen, auf $slots
+     * Slots gebracht (stündliches Archivaggregat → auf Raster expandiert).
+     * Nicht belegte/zukünftige Slots = null. Rückgabe null ohne Archiv/Daten.
+     */
+    private function readMeasured(int $vid, int $slots)
+    {
+        if ($vid <= 0 || !IPS_VariableExists($vid)) { return null; }
+        $aid = $this->getArchiveID();
+        if ($aid === 0) { return null; }
+
+        $start = strtotime('today');
+        $end   = $start + 86400 - 1;
+        $rows  = AC_GetAggregatedValues($aid, $vid, 0 /* stündlich */, $start, $end, 0);
+        if (!is_array($rows) || count($rows) === 0) { return null; }
+
+        $hourly = array_fill(0, 24, null);
+        foreach ($rows as $r) {
+            $h = (int) date('G', $r['TimeStamp']);
+            if ($h >= 0 && $h < 24) { $hourly[$h] = (float) $r['Avg']; }
+        }
+
+        $per = max(1, (int) ($slots / 24));
+        $out = array_fill(0, $slots, null);
+        for ($s = 0; $s < $slots; $s++) {
+            $h = intdiv($s, $per);
+            if ($h < 24 && $hourly[$h] !== null) { $out[$s] = $hourly[$h]; }
+        }
+        return $out;
+    }
+
+    private function getArchiveID(): int
+    {
+        $ids = IPS_GetInstanceListByModuleID('{43192F0B-135B-4CE7-A0A7-1475603F3060}');
+        return (count($ids) > 0) ? (int) $ids[0] : 0;
     }
 
     private function ResolveSource(string $guid, string $prop): int
