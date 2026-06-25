@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.2
+
+- **Ist-Verlauf-Overlay ohne Treppenstufen**: Bei 30/15-min-Auflösung wird der gemessene
+  Tagesverlauf jetzt zeitgewichtet aus den Rohwerten integriert (`AC_GetLoggedValues`) statt aus dem
+  stündlichen Aggregat hochgerechnet — echte Viertelstunden-Auflösung (Wolkendips u. Ä. sichtbar),
+  glatte Linie. 60 min nutzt weiterhin das leichtgewichtige Stundenaggregat.
+
 ## 0.9.1
 
 - **Fix Zeitversatz PV-Prognose (Open-Meteo)**: Open-Meteo liefert Strahlung als Mittel der

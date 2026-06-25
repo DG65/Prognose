@@ -240,21 +240,72 @@ class Energiebilanz extends IPSModule
         if ($aid === 0) { return null; }
 
         $start = strtotime('today');
-        $end   = $start + 86400 - 1;
-        $rows  = AC_GetAggregatedValues($aid, $vid, 0 /* stündlich */, $start, $end, 0);
-        if (!is_array($rows) || count($rows) === 0) { return null; }
 
-        $hourly = array_fill(0, 24, null);
-        foreach ($rows as $r) {
-            $h = (int) date('G', $r['TimeStamp']);
-            if ($h >= 0 && $h < 24) { $hourly[$h] = (float) $r['Avg']; }
+        // 60 min: stündliches Aggregat (exakt, leichtgewichtig).
+        if ($slots <= 24) {
+            $rows = AC_GetAggregatedValues($aid, $vid, 0, $start, $start + 86400 - 1, 0);
+            if (!is_array($rows) || count($rows) === 0) { return null; }
+            $out = array_fill(0, $slots, null);
+            foreach ($rows as $r) {
+                $h = (int) date('G', $r['TimeStamp']);
+                if ($h >= 0 && $h < $slots) { $out[$h] = (float) $r['Avg']; }
+            }
+            return $out;
         }
 
-        $per = max(1, (int) ($slots / 24));
+        // 30/15 min: zeitgewichtet aus den Rohwerten (keine Treppenstufen).
+        return $this->measuredFine($aid, $vid, $start, $slots);
+    }
+
+    /**
+     * Gemessenes Slot-Profil (heute bis „jetzt") zeitgewichtet aus den
+     * Rohwerten: jeder geloggte Wert gilt bis zum nächsten Wechsel,
+     * Ø-Leistung je Slot = Σ v·Δt / Σ Δt. Zukünftige Slots = null.
+     */
+    private function measuredFine(int $aid, int $vid, int $start, int $slots)
+    {
+        $until   = min($start + 86400, time());
+        $slotSec = 86400.0 / $slots;
+
+        $carry = null;
+        $pre = AC_GetLoggedValues($aid, $vid, 0, $start - 1, 1);
+        if (is_array($pre) && count($pre) > 0) { $carry = (float) $pre[0]['Value']; }
+
+        $rows = AC_GetLoggedValues($aid, $vid, $start, $until, 0);
+        if (!is_array($rows)) { $rows = []; }
+        usort($rows, function ($a, $b) { return $a['TimeStamp'] <=> $b['TimeStamp']; });
+
+        $points = [];
+        $first  = ($carry !== null) ? $carry : (count($rows) > 0 ? (float) $rows[0]['Value'] : null);
+        $points[] = ['t' => $start, 'v' => $first];
+        foreach ($rows as $r) {
+            $t = (int) $r['TimeStamp'];
+            if ($t > $start && $t <= $until) { $points[] = ['t' => $t, 'v' => (float) $r['Value']]; }
+        }
+        if ($first === null && count($points) <= 1) { return null; }
+
+        $sumW = array_fill(0, $slots, 0.0);
+        $sumS = array_fill(0, $slots, 0.0);
+        $cnt  = count($points);
+        for ($p = 0; $p < $cnt; $p++) {
+            $v = $points[$p]['v'];
+            if ($v === null) { continue; }
+            $t0 = $points[$p]['t'];
+            $t1 = ($p + 1 < $cnt) ? $points[$p + 1]['t'] : $until;
+            while ($t0 < $t1) {
+                $slot = (int) (($t0 - $start) / $slotSec);
+                if ($slot < 0 || $slot >= $slots) { break; }
+                $slotEnd = $start + ($slot + 1) * $slotSec;
+                $segEnd  = min($t1, $slotEnd);
+                $dur     = $segEnd - $t0;
+                $sumW[$slot] += $v * $dur;
+                $sumS[$slot] += $dur;
+                $t0 = $segEnd;
+            }
+        }
         $out = array_fill(0, $slots, null);
         for ($s = 0; $s < $slots; $s++) {
-            $h = intdiv($s, $per);
-            if ($h < 24 && $hourly[$h] !== null) { $out[$s] = $hourly[$h]; }
+            if ($sumS[$s] > 0) { $out[$s] = $sumW[$s] / $sumS[$s]; }
         }
         return $out;
     }
