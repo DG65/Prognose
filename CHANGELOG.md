@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.1
+
+- **Fix Highcharts-Kachel verschwand nach ~10–20 s**: Bei jeder Live-Aktualisierung wurde der
+  Diagramm-Container geleert (`innerHTML = ''`), wodurch das anschließende `chart.update()` ins Leere
+  lief. Der Container wird jetzt nur noch beim **Neuanlegen** geleert; Aktualisierungen laufen
+  in-place (mit Recreate-Fallback bei Fehler). Mehrfach-Updates im Preview verifiziert.
+
 ## 0.11.0
 
 - **Energiebilanz-Kachel auf Highcharts umgebaut.** Professionelleres Diagramm mit kontrollierten

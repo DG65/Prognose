@@ -43,7 +43,6 @@
                 el.innerHTML = '<div class="empty">' + ((data && data.message) || 'Keine Daten') + '</div>';
                 return;
             }
-            el.innerHTML = '';
 
             var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
             var TEXT = dark ? '#e8edf2' : '#1b2430';
@@ -173,8 +172,11 @@
                 series: series
             };
 
-            if (chart) { chart.update(options, true, true); }
-            else { chart = Highcharts.chart('chart', options); }
+            if (chart) {
+                try { chart.update(options, true, true); }
+                catch (e) { try { chart.destroy(); } catch (_) {} chart = null; }
+            }
+            if (!chart) { el.innerHTML = ''; chart = Highcharts.chart('chart', options); }
         }
 
         window.addEventListener('resize', function () { if (chart) { chart.reflow(); } });
