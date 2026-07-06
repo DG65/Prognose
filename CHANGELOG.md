@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.2
+
+- **Fix: Tagesprognose unter dem Diagramm war unsichtbar.** Der Streifen mit Tagesname + kWh wurde
+  per `style.display = ''` nicht eingeblendet (fiel auf das CSS `display:none` zurück) und rutschte
+  zudem unter den Kachelrand. Jetzt explizit sichtbar (`display:block`), und im Höhenbudget der
+  eingestellten Diagrammhöhe wird Platz dafür reserviert (Diagramm etwas niedriger, Tagesprognose
+  bleibt sichtbar). Beide Engines.
+
 ## 0.12.1
 
 - **Zeitachse mit 3-Stunden-Raster** in der Energiebilanz-Kachel: Stunden-Beschriftung (00, 03, …, 21

@@ -3,8 +3,8 @@
     "author": "DG65",
     "name": "Prognose",
     "version": "0.12",
-    "build": 21,
-    "date": 1752192000,
+    "build": 22,
+    "date": 1752278400,
     "description": "Energieprognose-Suite für IP-Symcon. Lastprognose (Verbrauch, k-NN-Ähnliche-Tage mit P10/P50/P90 und WP-Regression) und PV-Erzeugungsprognose (physikbasiert über Open-Meteo/Forecast.Solar/Solcast je Generator, mit Selbstkalibrierung) plus kombinierte Energiebilanz-Kachel, die Erzeugung und Verbrauch gemeinsam (oder einzeln) darstellt. Liefert JSON-Profile zur direkten Nutzung durch das EMS.",
     "url": "https://github.com/DG65/Prognose",
     "modules": [

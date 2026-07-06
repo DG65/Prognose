@@ -124,9 +124,10 @@
         // ---- Highcharts (privat) ----------------------------------------
         function buildHC() {
             var D = prepData(), data = D.data, el = document.getElementById('chart');
+            var stripH = Math.round(30 * D.scale), canvasH = Math.max(140, D.height - stripH);
             document.getElementById('legend').style.display = 'none';
-            var daysEl = document.getElementById('days'); daysEl.style.display = ''; dayStrip(daysEl, D);
-            el.style.height = D.height + 'px';
+            var daysEl = document.getElementById('days'); daysEl.style.display = 'block'; dayStrip(daysEl, D);
+            el.style.height = canvasH + 'px';
 
             var TEXT = D.TEXT, MUTED = D.MUTED, GRID = D.GRID, TIP = D.TIP, days = D.days, nDays = D.nDays;
             var pvC = D.pvC, loC = D.loC, scale = D.scale, lw = D.lw;
@@ -151,7 +152,7 @@
             if (D.nowX != null) { plotLines.push({ value: D.nowX, color: MUTED, width: 1, dashStyle: 'Dash', zIndex: 4 }); }
 
             var options = {
-                chart: { backgroundColor: data.bg ? data.bg : 'transparent', height: D.height, spacingTop: 10, spacingBottom: 2, marginLeft: 46, marginRight: 14, style: { fontFamily: D.font }, animation: false },
+                chart: { backgroundColor: data.bg ? data.bg : 'transparent', height: canvasH, spacingTop: 10, spacingBottom: 2, marginLeft: 46, marginRight: 14, style: { fontFamily: D.font }, animation: false },
                 title: { text: undefined }, credits: { enabled: false }, exporting: { enabled: false },
                 legend: { enabled: true, align: 'right', verticalAlign: 'top', floating: false, margin: 16, padding: 0, x: -2, y: 0, useHTML: true, symbolRadius: 6, itemStyle: { color: TEXT, fontSize: fpx(11), fontWeight: '400' }, itemHoverStyle: { color: TEXT }, labelFormatter: function () {
                     var ex = '';
@@ -212,9 +213,10 @@
         function buildEC() {
             var D = prepData(), el = document.getElementById('chart');
             var legEl = document.getElementById('legend'), daysEl = document.getElementById('days');
-            legEl.style.display = ''; daysEl.style.display = '';
-            el.style.height = D.height + 'px';
+            var stripH = Math.round(30 * D.scale), canvasH = Math.max(140, D.height - stripH);
+            legEl.style.display = 'block'; daysEl.style.display = 'block';
             ecLegend(legEl, D); dayStrip(daysEl, D);
+            el.style.height = canvasH + 'px';
 
             var pvVis = D.pvPresent && !userHide.pv, loVis = D.loPresent && !userHide.load;
             var fs = function (n) { return n * D.scale; };
@@ -285,6 +287,7 @@
             };
 
             if (!chart) { el.innerHTML = ''; chart = echarts.init(el, null, { renderer: 'canvas' }); }
+            chart.resize({ height: canvasH });
             chart.setOption(option, true);
         }
 
