@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.1
+
+- **Zeitachse mit 3-Stunden-Raster** in der Energiebilanz-Kachel: Stunden-Beschriftung (00, 03, …, 21
+  je Tag) und vertikales Gitter alle 3 h — der Tagesverlauf ist jetzt ablesbar. Die Tagesnamen + kWh
+  sind in den Streifen unter dem Diagramm gewandert (beide Engines), Tagesgrenzen als kräftigere
+  Trennlinie. Greift in ECharts wie in Highcharts.
+
 ## 0.12.0
 
 - **Wählbare Diagramm-Engine** in der Energiebilanz-Kachel:
