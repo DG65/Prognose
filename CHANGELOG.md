@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.0
+
+- **Ist-Tageswerte unter den Soll-Werten** (Energiebilanz-Kachel): Unter der Prognose („Soll") für
+  **heute** wird jetzt der bisher gemessene Tagesertrag/-verbrauch als „Ist" in kWh angezeigt
+  (PV · Verbrauch). Berechnet aus dem gemessenen Tagesverlauf (Integration bis „jetzt"), sobald die
+  Ist-Leistungsvariablen konfiguriert sind. Nur „heute" hat Ist-Werte; morgen/übermorgen zeigen nur
+  Soll. Der Tagesstreifen reserviert dafür automatisch etwas mehr Höhe. Beide Engines.
+
 ## 0.12.2
 
 - **Fix: Tagesprognose unter dem Diagramm war unsichtbar.** Der Streifen mit Tagesname + kWh wurde

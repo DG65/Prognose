@@ -195,24 +195,37 @@ class Energiebilanz extends IPSModule
         $actualPV   = $showPV   ? $this->readActual('ActualPV')   : null;
         $actualLoad = $showLoad ? $this->readActual('ActualLoad') : null;
 
-        // Gemessener Tagesverlauf (heute) als Overlay — auf das Slot-Raster
-        // des jeweiligen Tag-0-Prognoseprofils gebracht.
+        // Gemessener Tagesverlauf (heute): als Overlay (bei ShowActual*) und/oder
+        // als Ist-Tagessumme (kWh bis jetzt) unter den Soll-Werten.
         $measuredPV = null; $measuredLoad = null;
-        if ($showPV && $this->ReadPropertyBoolean('ShowActualPV') && ($days[0]['pv'] ?? null) !== null) {
-            $measuredPV = $this->measuredCached('pv', $this->ReadPropertyInteger('ActualPV'), count($days[0]['pv']['p50']));
+        $actualKwhPV = null; $actualKwhLoad = null;
+        if ($showPV && ($days[0]['pv'] ?? null) !== null && $this->ReadPropertyInteger('ActualPV') > 0) {
+            $n = count($days[0]['pv']['p50']);
+            $m = $this->measuredCached('pv', $this->ReadPropertyInteger('ActualPV'), $n);
+            if (is_array($m)) {
+                $actualKwhPV = $this->sumKwh($m, $n);
+                if ($this->ReadPropertyBoolean('ShowActualPV')) { $measuredPV = $m; }
+            }
         }
-        if ($showLoad && $this->ReadPropertyBoolean('ShowActualLoad') && ($days[0]['load'] ?? null) !== null) {
-            $measuredLoad = $this->measuredCached('load', $this->ReadPropertyInteger('ActualLoad'), count($days[0]['load']['p50']));
+        if ($showLoad && ($days[0]['load'] ?? null) !== null && $this->ReadPropertyInteger('ActualLoad') > 0) {
+            $n = count($days[0]['load']['p50']);
+            $m = $this->measuredCached('load', $this->ReadPropertyInteger('ActualLoad'), $n);
+            if (is_array($m)) {
+                $actualKwhLoad = $this->sumKwh($m, $n);
+                if ($this->ReadPropertyBoolean('ShowActualLoad')) { $measuredLoad = $m; }
+            }
         }
 
         return json_encode(array_merge($style, [
-            'hasData'      => $hasData,
-            'message'      => $hasData ? '' : 'Keine Prognosedaten',
-            'days'         => $days,
-            'actualPV'     => $actualPV,
-            'actualLoad'   => $actualLoad,
-            'measuredPV'   => $measuredPV,
-            'measuredLoad' => $measuredLoad,
+            'hasData'       => $hasData,
+            'message'       => $hasData ? '' : 'Keine Prognosedaten',
+            'days'          => $days,
+            'actualPV'      => $actualPV,
+            'actualLoad'    => $actualLoad,
+            'measuredPV'    => $measuredPV,
+            'measuredLoad'  => $measuredLoad,
+            'actualKwhPV'   => $actualKwhPV,
+            'actualKwhLoad' => $actualKwhLoad,
         ]));
     }
 
@@ -234,6 +247,16 @@ class Energiebilanz extends IPSModule
             ];
         }
         return $out;
+    }
+
+    /** Ist-Tagessumme (kWh bis jetzt) aus einem Slot-Profil (Ø-W je Slot). */
+    private function sumKwh($arr, int $n)
+    {
+        if (!is_array($arr) || $n <= 0) { return null; }
+        $hoursPerSlot = 24.0 / $n;
+        $sum = 0.0; $any = false;
+        foreach ($arr as $v) { if ($v !== null) { $sum += (float) $v; $any = true; } }
+        return $any ? $sum * $hoursPerSlot / 1000.0 : null;
     }
 
     /** Momentane Leistung (W) einer Ist-Wert-Variablen; null wenn unkonfiguriert. */

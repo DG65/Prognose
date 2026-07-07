@@ -96,6 +96,7 @@
                 scale: data.scale || 1, lw: data.lineWidth || 2, smooth: (data.smooth !== false),
                 showBand: (data.showBand !== false), bandOp: (data.bandOp != null ? data.bandOp : 0.16),
                 actualPV: data.actualPV, actualLoad: data.actualLoad,
+                actualKwhPV: data.actualKwhPV, actualKwhLoad: data.actualKwhLoad,
                 yMaxManual: data.yMaxManual || 0, showGrid: (data.showGrid !== false), font: data.font || 'sans-serif',
                 pvPresent: false, loPresent: false, pvLine: [], pvBand: [], loLine: [], loBand: []
             };
@@ -124,7 +125,7 @@
         // ---- Highcharts (privat) ----------------------------------------
         function buildHC() {
             var D = prepData(), data = D.data, el = document.getElementById('chart');
-            var stripH = Math.round(30 * D.scale), canvasH = Math.max(140, D.height - stripH);
+            var stripH = Math.round(((D.actualKwhPV != null || D.actualKwhLoad != null) ? 46 : 30) * D.scale), canvasH = Math.max(140, D.height - stripH);
             document.getElementById('legend').style.display = 'none';
             var daysEl = document.getElementById('days'); daysEl.style.display = 'block'; dayStrip(daysEl, D);
             el.style.height = canvasH + 'px';
@@ -196,14 +197,26 @@
             legEl.style.fontSize = (11 * D.scale) + 'px'; legEl.style.fontFamily = D.font; legEl.style.color = D.TEXT;
         }
         function dayStrip(daysEl, D) {
+            var hasIst = (D.actualKwhPV != null || D.actualKwhLoad != null);
+            function kwhRow(prefix, pvVal, loVal) {
+                var k = '';
+                if (pvVal != null) { k += '<span style="color:' + D.pvC + '">' + pvVal.toFixed(2) + '</span>'; }
+                if (pvVal != null && loVal != null) { k += ' · '; }
+                if (loVal != null) { k += '<span style="color:' + D.loC + '">' + loVal.toFixed(2) + '</span>'; }
+                if (!k) { return ''; }
+                var pre = prefix ? ('<span style="color:' + D.MUTED + '">' + prefix + ' </span>') : '';
+                return '<div style="color:' + D.MUTED + ';font-size:0.86em">' + pre + k + '<span style="color:' + D.MUTED + '"> kWh</span></div>';
+            }
             var h = '<div style="display:flex;padding:0 14px 0 46px">';
-            D.days.forEach(function (day) {
-                var pv = userHide.pv ? null : day.pv, lo = userHide.load ? null : day.load, k = '';
-                if (pv) { k += '<span style="color:' + D.pvC + '">' + pv.kwh.toFixed(2) + '</span>'; }
-                if (pv && lo) { k += ' · '; }
-                if (lo) { k += '<span style="color:' + D.loC + '">' + lo.kwh.toFixed(2) + '</span>'; }
-                if (k) { k += ' kWh'; }
-                h += '<div style="flex:1;text-align:center"><div style="font-weight:500;color:' + D.TEXT + '">' + cap(day.label) + '</div><div style="color:' + D.MUTED + ';font-size:0.88em">' + k + '</div></div>';
+            D.days.forEach(function (day, di) {
+                var pv = userHide.pv ? null : day.pv, lo = userHide.load ? null : day.load;
+                var soll = kwhRow(hasIst ? 'Soll' : '', pv ? pv.kwh : null, lo ? lo.kwh : null);
+                var ist = '';
+                if (di === 0 && day.label === 'heute') {
+                    var ipv = (!userHide.pv) ? D.actualKwhPV : null, ilo = (!userHide.load) ? D.actualKwhLoad : null;
+                    if (ipv != null || ilo != null) { ist = kwhRow('Ist', ipv, ilo); }
+                }
+                h += '<div style="flex:1;text-align:center;line-height:1.3"><div style="font-weight:500;color:' + D.TEXT + '">' + cap(day.label) + '</div>' + soll + ist + '</div>';
             });
             daysEl.innerHTML = h + '</div>';
             daysEl.style.fontSize = (11 * D.scale) + 'px'; daysEl.style.fontFamily = D.font;
@@ -213,7 +226,7 @@
         function buildEC() {
             var D = prepData(), el = document.getElementById('chart');
             var legEl = document.getElementById('legend'), daysEl = document.getElementById('days');
-            var stripH = Math.round(30 * D.scale), canvasH = Math.max(140, D.height - stripH);
+            var stripH = Math.round(((D.actualKwhPV != null || D.actualKwhLoad != null) ? 46 : 30) * D.scale), canvasH = Math.max(140, D.height - stripH);
             legEl.style.display = 'block'; daysEl.style.display = 'block';
             ecLegend(legEl, D); dayStrip(daysEl, D);
             el.style.height = canvasH + 'px';
