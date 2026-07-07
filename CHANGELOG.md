@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.0
+
+- **Prognose-Snapshots (Vorbereitung für „Gestern"-Kontrolle):** Lastprognose und PV-Prognose
+  speichern bei jeder Neuberechnung die Prognose (Soll) je Tag als Snapshot (Day-Ahead: heute +
+  morgen, jeweils nur der früheste Stand pro Datum), begrenzt auf 14 Tage. Damit kann später ein
+  vergangener Tag echtes **Soll vs. Ist** zeigen. Abruf über `LFC_GetSnapshot($id, 'Y-m-d')` bzw.
+  `PVF_GetSnapshot($id, 'Y-m-d')`. Noch keine Darstellung im Diagramm — die Daten bauen sich erst
+  über die nächsten Tage auf.
+
 ## 0.13.0
 
 - **Ist-Tageswerte unter den Soll-Werten** (Energiebilanz-Kachel): Unter der Prognose („Soll") für

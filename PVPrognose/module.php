@@ -75,6 +75,9 @@ class PVPrognose extends IPSModule
         $this->RegisterVariableString('PVF_Status',    'Status',                    '', 70);
         $this->RegisterVariableInteger('PVF_LastUpdate','Letzte Berechnung',        '~UnixTimestamp', 80);
 
+        // Tages-Snapshots der Prognose (für spätere Soll-vs-Ist-Kontrolle je Tag)
+        $this->RegisterAttributeString('PVF_Snapshots', '');
+
         $this->RegisterTimer('PVF_RebuildTimer', 0, 'PVF_Rebuild($_IPS[\'TARGET\']);');
     }
 
@@ -120,11 +123,14 @@ class PVPrognose extends IPSModule
 
         $idents = ['PVF_Today', 'PVF_Tomorrow', 'PVF_DayAfter'];
         $kwhIds = ['PVF_kWhToday', 'PVF_kWhTomorrow', 'PVF_kWhDayAfter'];
+        $fcs = [];
         for ($offset = 0; $offset <= 2; $offset++) {
             $fc = $this->GetForecast($offset);
+            $fcs[$offset] = $fc;
             $this->SetValue($idents[$offset], json_encode($fc));
             $this->SetValue($kwhIds[$offset], round($fc['kwh'], 2));
         }
+        $this->saveSnapshot($fcs);
 
         $this->SetValue('PVF_LastUpdate', time());
         $this->SetValue('PVF_Status', sprintf(
@@ -218,6 +224,45 @@ class PVPrognose extends IPSModule
     public function GetStatusText()
     {
         return (string) $this->GetValue('PVF_Status');
+    }
+
+    /**
+     * Gespeicherte PV-Prognose (Soll) eines vergangenen Tages ('Y-m-d').
+     * Rückgabe [] wenn kein Snapshot vorhanden.
+     */
+    public function GetSnapshot(string $date)
+    {
+        $snaps = json_decode($this->ReadAttributeString('PVF_Snapshots'), true);
+        return (is_array($snaps) && isset($snaps[$date])) ? $snaps[$date] : [];
+    }
+
+    /**
+     * Speichert je Tag genau einen Prognose-Snapshot (Soll): heute + morgen,
+     * jeweils nur wenn für das Datum noch keiner existiert → jeder Tag behält
+     * den frühesten (Day-Ahead-)Stand. Auf die letzten 14 Tage begrenzt.
+     */
+    private function saveSnapshot(array $fcs)
+    {
+        $snaps = json_decode($this->ReadAttributeString('PVF_Snapshots'), true);
+        if (!is_array($snaps)) { $snaps = []; }
+
+        foreach ([0, 1] as $offset) {
+            if (!isset($fcs[$offset])) { continue; }
+            $fc   = $fcs[$offset];
+            $date = date('Y-m-d', strtotime('today +' . $offset . ' days'));
+            if (isset($snaps[$date])) { continue; }
+            if (array_sum($fc['p50'] ?? []) <= 0) { continue; }
+            $snaps[$date] = [
+                'slots'      => $fc['slots'],
+                'resolution' => $fc['resolution'],
+                'p50'        => $fc['p50'],
+                'kwh'        => $fc['kwh'],
+            ];
+        }
+
+        krsort($snaps);
+        $snaps = array_slice($snaps, 0, 14, true);
+        $this->WriteAttributeString('PVF_Snapshots', json_encode($snaps));
     }
 
     // ----------------------------------------------------------------

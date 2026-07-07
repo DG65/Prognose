@@ -131,6 +131,9 @@ class Lastprognose extends IPSModule
         $this->RegisterVariableInteger('LFC_LastUpdate','Letzte Berechnung',        '~UnixTimestamp', 90);
 
         // ── Timer ───────────────────────────────────────────────────
+        // Tages-Snapshots der Prognose (für spätere Soll-vs-Ist-Kontrolle je Tag)
+        $this->RegisterAttributeString('LFC_Snapshots', '');
+
         $this->RegisterTimer('LFC_RebuildTimer', 0, 'LFC_Rebuild($_IPS[\'TARGET\']);');
     }
 
@@ -175,11 +178,14 @@ class Lastprognose extends IPSModule
             $idents = ['LFC_Today', 'LFC_Tomorrow', 'LFC_DayAfter'];
             $kwhIds = ['LFC_kWhToday', 'LFC_kWhTomorrow', 'LFC_kWhDayAfter'];
 
+            $fcs = [];
             for ($offset = 0; $offset <= 2; $offset++) {
                 $fc = $this->GetForecast($offset);
+                $fcs[$offset] = $fc;
                 $this->SetValue($idents[$offset], json_encode($fc));
                 $this->SetValue($kwhIds[$offset], round($fc['kwh'], 2));
             }
+            $this->saveSnapshot($fcs);
 
             // Optional: separate WP-/Klima-Prognose für heute/morgen/übermorgen
             $wpIds = ['LFC_WPkWhToday', 'LFC_WPkWhTomorrow', 'LFC_WPkWhDayAfter'];
@@ -289,6 +295,46 @@ class Lastprognose extends IPSModule
     public function GetStatusText()
     {
         return (string)$this->GetValue('LFC_Status');
+    }
+
+    /**
+     * Gespeicherte Prognose (Soll) eines vergangenen Tages ('Y-m-d').
+     * Rückgabe [] wenn kein Snapshot vorhanden.
+     */
+    public function GetSnapshot(string $date)
+    {
+        $snaps = json_decode($this->ReadAttributeString('LFC_Snapshots'), true);
+        return (is_array($snaps) && isset($snaps[$date])) ? $snaps[$date] : [];
+    }
+
+    /**
+     * Speichert je Tag genau einen Prognose-Snapshot (Soll): heute + morgen,
+     * jeweils nur wenn für das Datum noch keiner existiert → jeder Tag behält
+     * den frühesten (Day-Ahead-)Stand. Auf die letzten 14 Tage begrenzt.
+     */
+    private function saveSnapshot(array $fcs)
+    {
+        $snaps = json_decode($this->ReadAttributeString('LFC_Snapshots'), true);
+        if (!is_array($snaps)) { $snaps = []; }
+
+        foreach ([0, 1] as $offset) {
+            if (!isset($fcs[$offset])) { continue; }
+            $fc   = $fcs[$offset];
+            $date = date('Y-m-d', strtotime('today +' . $offset . ' days'));
+            if (isset($snaps[$date])) { continue; }
+            $sum = array_sum($fc['p50'] ?? []);
+            if ($sum <= 0) { continue; } // nichts Sinnvolles (z.B. keine Nachbarn)
+            $snaps[$date] = [
+                'slots'      => $fc['slots'],
+                'resolution' => $fc['resolution'],
+                'p50'        => $fc['p50'],
+                'kwh'        => $fc['kwh'],
+            ];
+        }
+
+        krsort($snaps);
+        $snaps = array_slice($snaps, 0, 14, true);
+        $this->WriteAttributeString('LFC_Snapshots', json_encode($snaps));
     }
 
     // ----------------------------------------------------------------
