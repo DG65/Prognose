@@ -63,6 +63,15 @@
             ]
         },
         {
+            "type": "CheckBox",
+            "name": "ShowYesterday",
+            "caption": "Gestern mit anzeigen (Soll aus gespeicherter Prognose + Ist aus Archiv)"
+        },
+        {
+            "type": "Label",
+            "caption": "Gestern zeigt die gemessenen Kurven (ganzer Tag) und, sobald ein Prognose-Snapshot vom Vortag existiert, zusätzlich das damalige Soll. Braucht die Ist-Variablen oben."
+        },
+        {
             "type": "NumberSpinner",
             "name": "MeasuredCacheSec",
             "caption": "Ist-Verlauf neu berechnen alle … s (Archiv-Cache)",

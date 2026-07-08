@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.15.0
+
+- **„Gestern" im Diagramm** (Energiebilanz-Kachel, Schalter „Gestern mit anzeigen"): links vom
+  Heute-Segment wird der Vortag ergänzt — **Soll** aus dem gespeicherten Prognose-Snapshot
+  (`LFC_/PVF_GetSnapshot`) und **Ist** als gemessene Kurve (ganzer Tag) aus dem Archiv. So sieht man,
+  wie gut die Prognose den Vortag getroffen hat. Der Tagesstreifen zeigt für jeden Tag Soll und (wo
+  vorhanden) Ist. Intern auf ein Pro-Tag-Ist-Modell umgebaut; „jetzt"-Marker sitzt weiterhin korrekt
+  am Heute-Segment. Beide Engines.
+  - Hinweis: Das „Soll" für Gestern erscheint erst, sobald ein Snapshot vom Vortag existiert (baut
+    sich ab v0.14 auf); bis dahin zeigt Gestern nur den gemessenen Ist-Verlauf.
+
 ## 0.14.0
 
 - **Prognose-Snapshots (Vorbereitung für „Gestern"-Kontrolle):** Lastprognose und PV-Prognose

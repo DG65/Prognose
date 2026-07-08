@@ -96,7 +96,6 @@
                 scale: data.scale || 1, lw: data.lineWidth || 2, smooth: (data.smooth !== false),
                 showBand: (data.showBand !== false), bandOp: (data.bandOp != null ? data.bandOp : 0.16),
                 actualPV: data.actualPV, actualLoad: data.actualLoad,
-                actualKwhPV: data.actualKwhPV, actualKwhLoad: data.actualKwhLoad,
                 yMaxManual: data.yMaxManual || 0, showGrid: (data.showGrid !== false), font: data.font || 'sans-serif',
                 pvPresent: false, loPresent: false, pvLine: [], pvBand: [], loLine: [], loBand: []
             };
@@ -110,12 +109,20 @@
                     for (var j = 0; j < n2; j++) { var x2 = di * 24 + j * st2; D.loLine.push([x2, d.load.p50[j] / 1000]); D.loBand.push([x2, d.load.p10[j] / 1000, d.load.p90[j] / 1000]); }
                 }
             });
-            function measured(arr, day0) { if (!arr || !day0) { return []; } var n = day0.p50.length, st = 24 / n, out = []; for (var i = 0; i < n; i++) { if (arr[i] != null) { out.push([i * st, arr[i] / 1000]); } } return out; }
-            D.pvMeas = measured(data.measuredPV, data.days[0].pv);
-            D.loMeas = measured(data.measuredLoad, data.days[0].load);
+            // Ist-Verlauf je Tag (Gestern voller Tag, Heute bis jetzt) — über die Segmente verteilt.
+            D.pvMeas = []; D.loMeas = [];
+            data.days.forEach(function (d, di) {
+                if (d.pvMeas) { var n = d.pvMeas.length, st = 24 / n; for (var i = 0; i < n; i++) { if (d.pvMeas[i] != null) { D.pvMeas.push([di * 24 + i * st, d.pvMeas[i] / 1000]); } } }
+                if (d.loMeas) { var n2 = d.loMeas.length, st2 = 24 / n2; for (var j = 0; j < n2; j++) { if (d.loMeas[j] != null) { D.loMeas.push([di * 24 + j * st2, d.loMeas[j] / 1000]); } } }
+            });
+            D.hasIst = data.days.some(function (d) { return d.pvKwhIst != null || d.loKwhIst != null; });
+
+            // „jetzt"-Marker am Heute-Segment (mit Gestern verschiebt es sich um 24 h)
             D.nowX = null; D.nowPts = [];
-            if (data.days[0].label === 'heute') {
-                var now = new Date(); D.nowX = now.getHours() + now.getMinutes() / 60;
+            var heuteIdx = -1;
+            data.days.forEach(function (d, di) { if (d.label === 'heute') { heuteIdx = di; } });
+            if (heuteIdx >= 0) {
+                var now = new Date(); D.nowX = heuteIdx * 24 + now.getHours() + now.getMinutes() / 60;
                 if (D.pvPresent && data.actualPV != null) { D.nowPts.push({ x: D.nowX, y: data.actualPV / 1000, color: D.pvC }); }
                 if (D.loPresent && data.actualLoad != null) { D.nowPts.push({ x: D.nowX, y: data.actualLoad / 1000, color: D.loC }); }
             }
@@ -125,7 +132,7 @@
         // ---- Highcharts (privat) ----------------------------------------
         function buildHC() {
             var D = prepData(), data = D.data, el = document.getElementById('chart');
-            var stripH = Math.round(((D.actualKwhPV != null || D.actualKwhLoad != null) ? 46 : 30) * D.scale), canvasH = Math.max(140, D.height - stripH);
+            var stripH = Math.round((D.hasIst ? 46 : 30) * D.scale), canvasH = Math.max(140, D.height - stripH);
             document.getElementById('legend').style.display = 'none';
             var daysEl = document.getElementById('days'); daysEl.style.display = 'block'; dayStrip(daysEl, D);
             el.style.height = canvasH + 'px';
@@ -197,7 +204,7 @@
             legEl.style.fontSize = (11 * D.scale) + 'px'; legEl.style.fontFamily = D.font; legEl.style.color = D.TEXT;
         }
         function dayStrip(daysEl, D) {
-            var hasIst = (D.actualKwhPV != null || D.actualKwhLoad != null);
+            var hasIst = D.hasIst;
             function kwhRow(prefix, pvVal, loVal) {
                 var k = '';
                 if (pvVal != null) { k += '<span style="color:' + D.pvC + '">' + pvVal.toFixed(2) + '</span>'; }
@@ -211,11 +218,8 @@
             D.days.forEach(function (day, di) {
                 var pv = userHide.pv ? null : day.pv, lo = userHide.load ? null : day.load;
                 var soll = kwhRow(hasIst ? 'Soll' : '', pv ? pv.kwh : null, lo ? lo.kwh : null);
-                var ist = '';
-                if (di === 0 && day.label === 'heute') {
-                    var ipv = (!userHide.pv) ? D.actualKwhPV : null, ilo = (!userHide.load) ? D.actualKwhLoad : null;
-                    if (ipv != null || ilo != null) { ist = kwhRow('Ist', ipv, ilo); }
-                }
+                var ipv = (!userHide.pv) ? day.pvKwhIst : null, ilo = (!userHide.load) ? day.loKwhIst : null;
+                var ist = (ipv != null || ilo != null) ? kwhRow('Ist', ipv, ilo) : '';
                 h += '<div style="flex:1;text-align:center;line-height:1.3"><div style="font-weight:500;color:' + D.TEXT + '">' + cap(day.label) + '</div>' + soll + ist + '</div>';
             });
             daysEl.innerHTML = h + '</div>';
@@ -226,7 +230,7 @@
         function buildEC() {
             var D = prepData(), el = document.getElementById('chart');
             var legEl = document.getElementById('legend'), daysEl = document.getElementById('days');
-            var stripH = Math.round(((D.actualKwhPV != null || D.actualKwhLoad != null) ? 46 : 30) * D.scale), canvasH = Math.max(140, D.height - stripH);
+            var stripH = Math.round((D.hasIst ? 46 : 30) * D.scale), canvasH = Math.max(140, D.height - stripH);
             legEl.style.display = 'block'; daysEl.style.display = 'block';
             ecLegend(legEl, D); dayStrip(daysEl, D);
             el.style.height = canvasH + 'px';

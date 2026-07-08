@@ -44,6 +44,8 @@ class Energiebilanz extends IPSModule
         // Gemessenen Tagesverlauf (heute) als Overlay-Linie zeichnen.
         $this->RegisterPropertyBoolean('ShowActualPV',   false);
         $this->RegisterPropertyBoolean('ShowActualLoad', false);
+        // Gestern mit anzeigen (Soll aus Snapshot + Ist aus Archiv, ganzer Tag).
+        $this->RegisterPropertyBoolean('ShowYesterday',  false);
         // Ist-Verlauf nur alle … Sekunden neu aus dem Archiv integrieren (Cache).
         $this->RegisterPropertyInteger('MeasuredCacheSec', 120);
         $this->RegisterAttributeString('MeasuredCache', '');
@@ -182,50 +184,70 @@ class Energiebilanz extends IPSModule
         $pvDays   = $this->ReadSeries($pvSrc,   ['PVF_Today', 'PVF_Tomorrow', 'PVF_DayAfter'], $limit);
         $loadDays = $this->ReadSeries($loadSrc, ['LFC_Today', 'LFC_Tomorrow', 'LFC_DayAfter'], $limit);
 
+        // Momentane Ist-Leistung (W) für „jetzt"-Punkt/Legende.
+        $actualPV   = $showPV   ? $this->readActual('ActualPV')   : null;
+        $actualLoad = $showLoad ? $this->readActual('ActualLoad') : null;
+
+        $pvVar = $this->ReadPropertyInteger('ActualPV');
+        $loVar = $this->ReadPropertyInteger('ActualLoad');
+        $showMeasPV   = $this->ReadPropertyBoolean('ShowActualPV');
+        $showMeasLoad = $this->ReadPropertyBoolean('ShowActualLoad');
+        $today = strtotime('today');
+
         $days = [];
+
+        // ── Gestern (optional): Soll aus Snapshot, Ist (voller Tag) aus Archiv
+        if ($this->ReadPropertyBoolean('ShowYesterday')) {
+            $yDate  = date('Y-m-d', strtotime('yesterday'));
+            $yStart = strtotime('yesterday');
+            $gpv = $showPV   ? $this->snapshotToDay($pvSrc,   'PVF_GetSnapshot', $yDate) : null;
+            $glo = $showLoad ? $this->snapshotToDay($loadSrc, 'LFC_GetSnapshot', $yDate) : null;
+            $g = ['label' => 'gestern', 'pv' => $gpv, 'load' => $glo,
+                  'pvMeas' => null, 'loMeas' => null, 'pvKwhIst' => null, 'loKwhIst' => null];
+            $refPV = ($pvDays[0] !== null) ? count($pvDays[0]['p50']) : ($gpv ? count($gpv['p50']) : 0);
+            if ($showPV && $pvVar > 0 && $refPV > 0) {
+                $m = $this->measuredCached('pv', $pvVar, $refPV, $yStart);
+                if (is_array($m)) { $g['pvMeas'] = $m; $g['pvKwhIst'] = $this->sumKwh($m, $refPV); }
+            }
+            $refLo = ($loadDays[0] !== null) ? count($loadDays[0]['p50']) : ($glo ? count($glo['p50']) : 0);
+            if ($showLoad && $loVar > 0 && $refLo > 0) {
+                $m = $this->measuredCached('load', $loVar, $refLo, $yStart);
+                if (is_array($m)) { $g['loMeas'] = $m; $g['loKwhIst'] = $this->sumKwh($m, $refLo); }
+            }
+            if ($g['pv'] !== null || $g['load'] !== null || $g['pvMeas'] !== null || $g['loMeas'] !== null) {
+                $days[] = $g;
+            }
+        }
+
+        // ── Heute / Morgen / Übermorgen (heute zusätzlich mit Ist bis jetzt)
         $hasData = false;
         for ($i = 0; $i < $limit; $i++) {
             $pv   = $pvDays[$i]   ?? null;
             $load = $loadDays[$i] ?? null;
             if ($pv !== null || $load !== null) { $hasData = true; }
-            $days[] = ['label' => $labels[$i], 'pv' => $pv, 'load' => $load];
-        }
-
-        // Ist-Werte (momentane Leistung in W), nur wenn die Reihe sichtbar ist.
-        $actualPV   = $showPV   ? $this->readActual('ActualPV')   : null;
-        $actualLoad = $showLoad ? $this->readActual('ActualLoad') : null;
-
-        // Gemessener Tagesverlauf (heute): als Overlay (bei ShowActual*) und/oder
-        // als Ist-Tagessumme (kWh bis jetzt) unter den Soll-Werten.
-        $measuredPV = null; $measuredLoad = null;
-        $actualKwhPV = null; $actualKwhLoad = null;
-        if ($showPV && ($days[0]['pv'] ?? null) !== null && $this->ReadPropertyInteger('ActualPV') > 0) {
-            $n = count($days[0]['pv']['p50']);
-            $m = $this->measuredCached('pv', $this->ReadPropertyInteger('ActualPV'), $n);
-            if (is_array($m)) {
-                $actualKwhPV = $this->sumKwh($m, $n);
-                if ($this->ReadPropertyBoolean('ShowActualPV')) { $measuredPV = $m; }
+            $d = ['label' => $labels[$i], 'pv' => $pv, 'load' => $load,
+                  'pvMeas' => null, 'loMeas' => null, 'pvKwhIst' => null, 'loKwhIst' => null];
+            if ($i === 0) {
+                if ($showPV && $pvVar > 0 && $pv !== null) {
+                    $n = count($pv['p50']);
+                    $m = $this->measuredCached('pv', $pvVar, $n, $today);
+                    if (is_array($m)) { $d['pvKwhIst'] = $this->sumKwh($m, $n); if ($showMeasPV) { $d['pvMeas'] = $m; } }
+                }
+                if ($showLoad && $loVar > 0 && $load !== null) {
+                    $n = count($load['p50']);
+                    $m = $this->measuredCached('load', $loVar, $n, $today);
+                    if (is_array($m)) { $d['loKwhIst'] = $this->sumKwh($m, $n); if ($showMeasLoad) { $d['loMeas'] = $m; } }
+                }
             }
-        }
-        if ($showLoad && ($days[0]['load'] ?? null) !== null && $this->ReadPropertyInteger('ActualLoad') > 0) {
-            $n = count($days[0]['load']['p50']);
-            $m = $this->measuredCached('load', $this->ReadPropertyInteger('ActualLoad'), $n);
-            if (is_array($m)) {
-                $actualKwhLoad = $this->sumKwh($m, $n);
-                if ($this->ReadPropertyBoolean('ShowActualLoad')) { $measuredLoad = $m; }
-            }
+            $days[] = $d;
         }
 
         return json_encode(array_merge($style, [
-            'hasData'       => $hasData,
-            'message'       => $hasData ? '' : 'Keine Prognosedaten',
-            'days'          => $days,
-            'actualPV'      => $actualPV,
-            'actualLoad'    => $actualLoad,
-            'measuredPV'    => $measuredPV,
-            'measuredLoad'  => $measuredLoad,
-            'actualKwhPV'   => $actualKwhPV,
-            'actualKwhLoad' => $actualKwhLoad,
+            'hasData'    => $hasData,
+            'message'    => $hasData ? '' : 'Keine Prognosedaten',
+            'days'       => $days,
+            'actualPV'   => $actualPV,
+            'actualLoad' => $actualLoad,
         ]));
     }
 
@@ -247,6 +269,19 @@ class Energiebilanz extends IPSModule
             ];
         }
         return $out;
+    }
+
+    /**
+     * Gespeicherten Prognose-Snapshot (Soll) eines Tages als Tag-Struktur.
+     * p10=p50=p90 (Snapshot hat nur den Median → Linie ohne Band).
+     */
+    private function snapshotToDay(int $src, string $fn, string $date)
+    {
+        if ($src <= 0 || !function_exists($fn)) { return null; }
+        $snap = @$fn($src, $date);
+        if (!is_array($snap) || empty($snap['p50']) || !is_array($snap['p50'])) { return null; }
+        $p50 = array_map('floatval', $snap['p50']);
+        return ['p10' => $p50, 'p50' => $p50, 'p90' => $p50, 'kwh' => round((float) ($snap['kwh'] ?? 0), 2)];
     }
 
     /** Ist-Tagessumme (kWh bis jetzt) aus einem Slot-Profil (Ø-W je Slot). */
@@ -277,36 +312,36 @@ class Energiebilanz extends IPSModule
      * MeasuredCacheSec Sekunden neu (Archiv-Zugriff), dazwischen aus dem
      * Attribut. Der „jetzt"-Punkt/Legendenwert bleibt davon unberührt (live).
      */
-    private function measuredCached(string $key, int $vid, int $slots)
+    private function measuredCached(string $key, int $vid, int $slots, int $start)
     {
-        $ttl   = max(15, $this->ReadPropertyInteger('MeasuredCacheSec'));
-        $today = date('Y-m-d');
+        $today   = strtotime('today');
+        $dateStr = date('Y-m-d', $start);
+        $cKey    = $key . '_' . $dateStr;
+        // Abgeschlossene Tage ändern sich nicht mehr → länger cachen.
+        $ttl     = ($start < $today) ? 21600 : max(15, $this->ReadPropertyInteger('MeasuredCacheSec'));
 
         $cache = json_decode($this->ReadAttributeString('MeasuredCache'), true);
         if (!is_array($cache)) { $cache = []; }
 
-        $e = $cache[$key] ?? null;
+        $e = $cache[$cKey] ?? null;
         if (is_array($e)
-            && ($e['day'] ?? '') === $today
             && (int) ($e['vid'] ?? 0) === $vid
             && (int) ($e['slots'] ?? 0) === $slots
             && (time() - (int) ($e['ts'] ?? 0)) < $ttl) {
             return $e['data'];
         }
 
-        $data = $this->readMeasured($vid, $slots);
-        $cache[$key] = ['ts' => time(), 'day' => $today, 'vid' => $vid, 'slots' => $slots, 'data' => $data];
+        $data = $this->readMeasured($vid, $slots, $start);
+        $cache[$cKey] = ['ts' => time(), 'vid' => $vid, 'slots' => $slots, 'data' => $data];
         $this->WriteAttributeString('MeasuredCache', json_encode($cache));
         return $data;
     }
 
-    private function readMeasured(int $vid, int $slots)
+    private function readMeasured(int $vid, int $slots, int $start)
     {
         if ($vid <= 0 || !IPS_VariableExists($vid)) { return null; }
         $aid = $this->getArchiveID();
         if ($aid === 0) { return null; }
-
-        $start = strtotime('today');
 
         // 60 min: stündliches Aggregat (exakt, leichtgewichtig).
         if ($slots <= 24) {
