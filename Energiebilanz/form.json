@@ -36,6 +36,10 @@
                 {
                     "type": "Label",
                     "caption": "Tipp: Kachel im WebFront groß genug ziehen (Kachelgröße = sichtbarer Ausschnitt, Diagrammhöhe = Zeichnungshöhe). Wallbox/Batterie in der Lastprognose abziehen macht das Verbrauchsband deutlich ruhiger."
+                },
+                {
+                    "type": "Label",
+                    "caption": "IPSView/Popup: Die Kachel läuft auch als eigenständige Webseite unter http://<IPS-IP>:3777%%HOOK%% (Auto-Aktualisierung alle 30 s). In IPSView ein WebView-Element auf eine Popup-Seite legen und diese URL eintragen. Hinweis: WebHooks sind im lokalen Netz ohne Anmeldung erreichbar."
                 }
             ]
         },

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.19.0
+
+- **Energiebilanz als eigenständige Webseite (WebHook)** — für IPSView-Popups und jeden Browser:
+  Die Kachel ist jetzt zusätzlich unter `http://<IPS-IP>:3777/hook/energiebilanz<InstanzID>`
+  erreichbar (Auto-Aktualisierung alle 30 s per Polling; `?json=1` liefert nur die Daten).
+  Einbindung in IPSView: WebView-Element auf einer Popup-Seite mit dieser URL. Der Hook wird
+  automatisch registriert; die konkrete URL steht in der Instanz-Doku. Hinweis: WebHooks sind im
+  lokalen Netz ohne Anmeldung erreichbar.
+
 ## 0.18.2
 
 - **Grafische Hinweise in der Modul-Doku**: Die „📖 Dokumentation & Hilfe"-Panels enthalten jetzt
