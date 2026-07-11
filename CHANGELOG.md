@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.18.2
+
+- **Grafische Hinweise in der Modul-Doku**: Die „📖 Dokumentation & Hilfe"-Panels enthalten jetzt
+  erklärende Grafiken (eingebettet, kein Internet nötig):
+  - Lastprognose: **P10/P50/P90-Band** erklärt (Obergrenze/Median/Untergrenze, EMS-Nutzung).
+  - PV-Prognose: **Azimut-Kompass** (0=Süd, −90=Ost, +90=West) mit Neigungs-Hinweis.
+  - Energiebilanz: **Soll/Ist-Legende** (durchgezogen = Prognose, gestrichelt = gemessen,
+    Punkt = Momentanwert, Band = Unsicherheit).
+
 ## 0.18.1
 
 - **Dokumentation & Hilfe direkt im Modul**: Alle drei Instanz-Formulare haben jetzt ganz oben ein
