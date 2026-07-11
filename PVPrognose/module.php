@@ -60,6 +60,8 @@ class PVPrognose extends IPSModule
         // Selbstkalibrierung (Open-Meteo): gemessen vs. vorhergesagt.
         $this->RegisterPropertyBoolean('PVF_Calibrate',     false);
         $this->RegisterPropertyInteger('PVF_CalibDays',     21);
+        // Einheit der gemessenen Generator-Leistungsvariablen (0=W, 1=kW).
+        $this->RegisterPropertyInteger('PVF_PowerUnit',     0);
 
         // Zeitliche Auflösung (60/30/15 min). Quellen liefern stündlich;
         // feinere Stufen werden interpoliert (zur Deckung mit der Lastprognose).
@@ -578,8 +580,9 @@ class PVPrognose extends IPSModule
         $end   = $start + 86400 - 1;
         $rows  = AC_GetAggregatedValues($aid, $varID, 0, $start, $end, 0); // stündlich
         if (!is_array($rows) || count($rows) === 0) { return null; }
+        $f  = ($this->ReadPropertyInteger('PVF_PowerUnit') === 1) ? 1000.0 : 1.0; // kW → W
         $wh = 0.0;
-        foreach ($rows as $r) { $wh += (float)$r['Avg']; } // Ø-W × 1 h = Wh
+        foreach ($rows as $r) { $wh += (float)$r['Avg'] * $f; } // Ø-W × 1 h = Wh
         return $wh / 1000.0;
     }
 

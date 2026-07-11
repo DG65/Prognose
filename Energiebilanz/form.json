@@ -48,6 +48,15 @@
             "caption": "Ist-Hausverbrauch (W)"
         },
         {
+            "type": "Select",
+            "name": "PowerUnit",
+            "caption": "Einheit der Ist-Leistungsvariablen",
+            "options": [
+                { "caption": "W (Watt)",      "value": 0 },
+                { "caption": "kW (Kilowatt)", "value": 1 }
+            ]
+        },
+        {
             "type": "RowLayout",
             "items": [
                 {

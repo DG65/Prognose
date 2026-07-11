@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.16.0
+
+- **Einheit der Leistungsvariablen wählbar (W/kW)** — Community-Wunsch: wer seine Leistung seit
+  Jahren in kW loggt, muss nichts umkopieren.
+  - Lastprognose: ein Schalter für Hausverbrauch, Abzugsliste und Geräte (zentrale Umrechnung).
+  - PV-Prognose: Einheit der gemessenen Generator-Leistung (Selbstkalibrierung).
+  - Energiebilanz: Einheit der Ist-Leistungsvariablen (Legende, „jetzt"-Punkt, Ist-Verlauf, Ist-kWh).
+- **Anwesenheits-Logik invertierbar** — Community-Wunsch: wer eine ABwesenheits-Variable hat
+  (true = niemand zu Hause), aktiviert „Logik invertieren"; gilt für Historie und Vorhersage,
+  fehlende Tage werden im invertierten Modus korrekt als „anwesend" gewertet.
+
 ## 0.15.0
 
 - **„Gestern" im Diagramm** (Energiebilanz-Kachel, Schalter „Gestern mit anzeigen"): links vom

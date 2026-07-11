@@ -42,11 +42,20 @@
                 {
                     "type": "SelectVariable",
                     "name": "VAR_Consumption",
-                    "caption": "Hausverbrauch — LEISTUNG in W (muss archiviert sein)"
+                    "caption": "Hausverbrauch — LEISTUNG (muss archiviert sein)"
+                },
+                {
+                    "type": "Select",
+                    "name": "LFC_PowerUnit",
+                    "caption": "Einheit der Leistungsvariablen (gilt für Hausverbrauch, Abzugsliste und Geräte)",
+                    "options": [
+                        { "caption": "W (Watt)",       "value": 0 },
+                        { "caption": "kW (Kilowatt)",  "value": 1 }
+                    ]
                 },
                 {
                     "type": "Label",
-                    "caption": "Tipp: z.B. die EMS-Variable 'Hausverbrauch (W)'. Für eine reine Grundlast-Prognose unten WP/Wallbox abziehen."
+                    "caption": "Tipp: z.B. die EMS-Variable 'Hausverbrauch'. Für eine reine Grundlast-Prognose unten WP/Wallbox abziehen."
                 },
                 {
                     "type": "Label",
@@ -55,7 +64,7 @@
                 {
                     "type": "List",
                     "name": "ExcludeVars",
-                    "caption": "Wärmepumpe, Wallbox … (Leistung in W) werden slotweise abgezogen",
+                    "caption": "Wärmepumpe, Wallbox … (Leistung, Einheit wie oben) werden slotweise abgezogen",
                     "add": true,
                     "delete": true,
                     "columns": [
@@ -81,6 +90,11 @@
                     "type": "SelectVariable",
                     "name": "VAR_Presence",
                     "caption": "Anwesenheit (bool/0..1, archiviert) — z.B. Geofencing"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "LFC_PresenceInvert",
+                    "caption": "Logik invertieren — Variable meldet ABwesenheit (true = niemand zu Hause)"
                 }
             ]
         },

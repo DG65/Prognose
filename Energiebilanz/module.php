@@ -38,9 +38,11 @@ class Energiebilanz extends IPSModule
         $this->RegisterPropertyInteger('LoadSource', 0);
         $this->RegisterPropertyBoolean('ShowPV',     true);
         $this->RegisterPropertyBoolean('ShowLoad',   true);
-        // Ist-Werte (momentane Leistung in W) — optional, für Prognose vs. Realität.
+        // Ist-Werte (momentane Leistung) — optional, für Prognose vs. Realität.
         $this->RegisterPropertyInteger('ActualPV',   0);
         $this->RegisterPropertyInteger('ActualLoad', 0);
+        // Einheit der Ist-Leistungsvariablen (0=W, 1=kW).
+        $this->RegisterPropertyInteger('PowerUnit',  0);
         // Gemessenen Tagesverlauf (heute) als Overlay-Linie zeichnen.
         $this->RegisterPropertyBoolean('ShowActualPV',   false);
         $this->RegisterPropertyBoolean('ShowActualLoad', false);
@@ -299,7 +301,13 @@ class Energiebilanz extends IPSModule
     {
         $vid = $this->ReadPropertyInteger($prop);
         if ($vid <= 0 || !IPS_VariableExists($vid)) { return null; }
-        return (float) GetValue($vid);
+        return (float) GetValue($vid) * $this->powerFactor();
+    }
+
+    /** Faktor zur Umrechnung der Ist-Leistungsvariablen nach W (0=W, 1=kW). */
+    private function powerFactor(): float
+    {
+        return ($this->ReadPropertyInteger('PowerUnit') === 1) ? 1000.0 : 1.0;
     }
 
     /**
@@ -343,6 +351,8 @@ class Energiebilanz extends IPSModule
         $aid = $this->getArchiveID();
         if ($aid === 0) { return null; }
 
+        $f = $this->powerFactor();
+
         // 60 min: stündliches Aggregat (exakt, leichtgewichtig).
         if ($slots <= 24) {
             $rows = AC_GetAggregatedValues($aid, $vid, 0, $start, $start + 86400 - 1, 0);
@@ -350,13 +360,17 @@ class Energiebilanz extends IPSModule
             $out = array_fill(0, $slots, null);
             foreach ($rows as $r) {
                 $h = (int) date('G', $r['TimeStamp']);
-                if ($h >= 0 && $h < $slots) { $out[$h] = (float) $r['Avg']; }
+                if ($h >= 0 && $h < $slots) { $out[$h] = (float) $r['Avg'] * $f; }
             }
             return $out;
         }
 
         // 30/15 min: zeitgewichtet aus den Rohwerten (keine Treppenstufen).
-        return $this->measuredFine($aid, $vid, $start, $slots);
+        $fine = $this->measuredFine($aid, $vid, $start, $slots);
+        if (is_array($fine) && $f !== 1.0) {
+            foreach ($fine as $i => $v) { if ($v !== null) { $fine[$i] = $v * $f; } }
+        }
+        return $fine;
     }
 
     /**

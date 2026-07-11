@@ -70,12 +70,16 @@ class Lastprognose extends IPSModule
         // ── Datenquellen (Archiv) ───────────────────────────────────
         // Hauptverbrauch als LEISTUNG (W) — z.B. EMS_HousePower.
         $this->RegisterPropertyInteger('VAR_Consumption',    0);
+        // Einheit ALLER Leistungsvariablen (Hausverbrauch, Abzugsliste, Geräte).
+        $this->RegisterPropertyInteger('LFC_PowerUnit',      0); // 0=W, 1=kW
         // Optional abzuziehende Verbraucher (WP, Wallbox …) als Liste.
         $this->RegisterPropertyString('ExcludeVars',         '[]');
         // Außentemperatur (Historie, °C).
         $this->RegisterPropertyInteger('VAR_TempHistory',    0);
         // Anwesenheit (bool/0..1), Historie.
         $this->RegisterPropertyInteger('VAR_Presence',       0);
+        // Invertierte Logik: Variable meldet ABwesenheit statt Anwesenheit.
+        $this->RegisterPropertyBoolean('LFC_PresenceInvert', false);
 
         // ── Prognose-Eingaben (Zukunft) ─────────────────────────────
         // Quelle der Vorhersagetemperatur. Bewusst modul-agnostisch:
@@ -358,7 +362,8 @@ class Lastprognose extends IPSModule
             $temp = $this->dailyMean($this->ReadPropertyInteger('VAR_TempHistory'), $ts);
             if ($temp === null) { $temp = $this->ReadPropertyFloat('LFC_HDD_Base'); }
             $pres = $this->dailyMean($this->ReadPropertyInteger('VAR_Presence'), $ts);
-            if ($pres === null) { $pres = 1.0; }
+            if ($pres === null) { $pres = $this->ReadPropertyBoolean('LFC_PresenceInvert') ? 0.0 : 1.0; }
+            $pres = $this->applyPresence($pres);
         }
 
         $base = $this->ReadPropertyFloat('LFC_HDD_Base');
@@ -591,17 +596,21 @@ class Lastprognose extends IPSModule
         return $this->finishProfile($profile, $slots);
     }
 
-    /** Mindestabdeckung prüfen und Lücken per Nachbarwert füllen. */
+    /**
+     * Mindestabdeckung prüfen, Lücken per Nachbarwert füllen und auf W
+     * normieren (zentraler Punkt für die W/kW-Einheitenumrechnung).
+     */
     private function finishProfile(array $profile, int $slots)
     {
         $have = 0;
         foreach ($profile as $v) { if ($v !== null) { $have++; } }
         if ($have < $slots / 2) { return null; }
 
+        $f = $this->powerFactor();
         $last = 0.0;
         for ($s = 0; $s < $slots; $s++) {
             if ($profile[$s] === null) { $profile[$s] = $last; }
-            else { $last = $profile[$s]; }
+            else { $last = $profile[$s] * $f; $profile[$s] = $last; }
         }
         return $profile;
     }
@@ -822,9 +831,22 @@ class Lastprognose extends IPSModule
         $vid = $this->ReadPropertyInteger('VAR_PresenceFc');
         if ($vid <= 0) { $vid = $this->ReadPropertyInteger('VAR_Presence'); }
         if ($vid > 0 && IPS_VariableExists($vid)) {
-            return (float)GetValue($vid);
+            return $this->applyPresence((float)GetValue($vid));
         }
         return 1.0;
+    }
+
+    /** Invertiert das Anwesenheitssignal, falls die Variable Abwesenheit meldet. */
+    private function applyPresence(float $pres): float
+    {
+        $pres = max(0.0, min(1.0, $pres));
+        return $this->ReadPropertyBoolean('LFC_PresenceInvert') ? (1.0 - $pres) : $pres;
+    }
+
+    /** Faktor zur Umrechnung der Leistungsvariablen nach W (0=W, 1=kW). */
+    private function powerFactor(): float
+    {
+        return ($this->ReadPropertyInteger('LFC_PowerUnit') === 1) ? 1000.0 : 1.0;
     }
 
     // ----------------------------------------------------------------
