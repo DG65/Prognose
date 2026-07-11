@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.1
+
+- **Dokumentation & Hilfe direkt im Modul**: Alle drei Instanz-Formulare haben jetzt ganz oben ein
+  eingeklapptes Panel „📖 Dokumentation & Hilfe" (Muster wie im Modul Mittelwertberechnungen) —
+  Funktionsweise, Datenquellen, Abzugsliste-Empfehlung, Azimut-Konvention, Quellen-/Lizenzhinweise,
+  Erklärung der Prognosegüte (Bias/|Ø-Fehler|) und Praxis-Tipps.
+
 ## 0.18.0
 
 - **Prognosegüte-Messung (Soll vs. Ist)** in Lastprognose und PV-Prognose: Bei jeder Neuberechnung

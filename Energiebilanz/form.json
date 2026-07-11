@@ -1,6 +1,20 @@
 {
     "elements": [
         {
+            "type": "ExpansionPanel",
+            "caption": "📖 Dokumentation & Hilfe",
+            "expanded": false,
+            "items": [
+                { "type": "Label", "caption": "Was zeigt die Kachel: PV-Erzeugung und Verbrauch als Prognose-Kurven (P50) mit Unsicherheitsband (P10–P90) über bis zu 3 Tage — der EMS-Blick: Erzeugung gegen Verbrauch, die Lücke ist Netzbezug/Einspeisung. Hover/Touch zeigt Werte und Saldo zur Uhrzeit." },
+                { "type": "Label", "caption": "Quellen: die PV- und die Lastprognose-Instanz werden automatisch gefunden (nur bei mehreren Instanzen manuell wählen). Die Kachel funktioniert auch mit nur einer Quelle; per Schalter oder Klick auf den Legendeneintrag lässt sich jede Reihe ausblenden." },
+                { "type": "Label", "caption": "Ist-Werte: mit den beiden Ist-Leistungsvariablen erscheinen der Momentanwert in der Legende, ein Punkt auf der Jetzt-Linie, der gemessene Tagesverlauf als gestrichelte Linie (optional) und die Ist-kWh unter den Soll-Werten. Einheit W/kW wird automatisch erkannt." },
+                { "type": "Label", "caption": "Gestern: zeigt den Vortag mit gemessener Kurve (ganzer Tag) und — sobald ein Prognose-Snapshot vom Vortag existiert — dem damaligen Soll. So sieht man, wie gut die Prognose getroffen hat." },
+                { "type": "Label", "caption": "Diagramm-Engine: ECharts (Open Source, auch kommerziell kostenlos) oder Highcharts (nur privat/nicht-kommerziell kostenlos). Beide sehen praktisch gleich aus; die Library wird per CDN geladen (Internet im Anzeigegerät nötig)." },
+                { "type": "Label", "caption": "Darstellung: Diagrammhöhe, Linienstärke, Glättung, Band-Transparenz, Gitter, Y-Achse, Farben, Schriftart/-größe — alles im Panel Darstellung. Der Archiv-Cache (Ist-Verlauf) reduziert die Last; Standard 120 s reicht." },
+                { "type": "Label", "caption": "Tipp: Kachel im WebFront groß genug ziehen (Kachelgröße = sichtbarer Ausschnitt, Diagrammhöhe = Zeichnungshöhe). Wallbox/Batterie in der Lastprognose abziehen macht das Verbrauchsband deutlich ruhiger." }
+            ]
+        },
+        {
             "type": "Label",
             "caption": "Quellen werden automatisch erkannt (je eine PV- und Lastprognose-Instanz). Nur bei mehreren Instanzen hier festlegen."
         },

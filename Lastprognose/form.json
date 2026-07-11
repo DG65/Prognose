@@ -2,6 +2,22 @@
     "elements": [
         {
             "type": "ExpansionPanel",
+            "caption": "📖 Dokumentation & Hilfe",
+            "expanded": false,
+            "items": [
+                { "type": "Label", "caption": "Was macht das Modul: 1–3-Tage-Verbrauchsprognose aus dem IPS-Archiv über ein Ähnliche-Tage-Verfahren (k-NN). Für jeden Prognosetag werden die k ähnlichsten Vergangenheitstage gesucht (Tagtyp, Tageslänge, Heizgrad, Anwesenheit) und ihre Profile zu P10/P50/P90 verdichtet." },
+                { "type": "Label", "caption": "Hauptverbrauch: eine archivierte LEISTUNGS-Variable (kein kWh-Zähler). Die Einheit W/kW wird automatisch erkannt (Profil-Suffix, sonst Größenordnung) — bei Variablen ohne Profil ggf. manuell festlegen." },
+                { "type": "Label", "caption": "Abzugsliste (wichtig): steuerbare Lasten wie Wallbox, Batterie-Ladung oder Wärmepumpe hier eintragen. Sie werden vom Hausverbrauch abgezogen, damit die Prognose die planbare GRUNDLAST lernt — Laden/§14a plant das EMS selbst, sonst wird es doppelt gezählt." },
+                { "type": "Label", "caption": "Wärmepumpe/Klima: eigene Prognose je Gerät über Temperaturregression — Heizen (a + b·Heizgrad), Kühlen (a + c·Kühlgrad) oder beides (V-Kurve, z.B. Luft-Luft-WP). Braucht Gerät-Leistung + Außentemperatur im Archiv." },
+                { "type": "Label", "caption": "Anwesenheit: das wichtigste Zusatzsignal (Urlaub/Homeoffice ist aus dem Kalender nicht ableitbar). Bool/0..1, z.B. Geofencing; invertierbare Logik für Abwesenheits-Variablen." },
+                { "type": "Label", "caption": "Temperaturvorhersage: Auto findet eine OpenWeatherData-Instanz (demel42) selbst — dort muss die Stundenvorhersage aktiviert sein (hourly_forecast_count > 0). Alternativ Tagesmittel-Variablen oder Ident-Muster für andere Wettermodule. Ohne Quelle: saisonales Normal aus dem Archiv (Klimatologie). Wichtig: es zählt das TAGESMITTEL." },
+                { "type": "Label", "caption": "Ausgaben: je Tag ein JSON-Profil (p10/p50/p90/mean in W je Slot, kwh) plus kWh-Variablen. EMS-Zugriff: LFC_GetForecast($id, 0..2); P10/P90 = Unsicherheitsband für risikobewusste Entscheidungen." },
+                { "type": "Label", "caption": "Prognosegüte: vergleicht die Day-Ahead-Prognose vergangener Tage (Snapshots) mit dem gemessenen Ist. Bias = systematische Abweichung (+ = überschätzt), |Ø-Fehler| = mittlerer Betragsfehler. Werte füllen sich nach einigen Tagen Laufzeit." },
+                { "type": "Label", "caption": "Tipps: Auflösung 60 min ist robust; 30/15 min brauchen feine Roharchivierung. Bundesland setzen für regionale Feiertage. Historie-Tiefe 365 d deckt alle Jahreszeiten ab." }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
             "caption": "⚙️ Allgemein",
             "expanded": true,
             "items": [

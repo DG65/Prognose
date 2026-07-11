@@ -2,6 +2,21 @@
     "elements": [
         {
             "type": "ExpansionPanel",
+            "caption": "📖 Dokumentation & Hilfe",
+            "expanded": false,
+            "items": [
+                { "type": "Label", "caption": "Was macht das Modul: physikbasierte PV-Erzeugungsprognose für 1–3 Tage. Pro Generator (Dachfläche/MPP-Tracker) wird aus Neigung, Azimut und kWp mit einer Wetter-/Solar-API die erwartete Leistung berechnet; alle Generatoren werden zur Gesamt-PV summiert." },
+                { "type": "Label", "caption": "Azimut-Konvention: 0 = Süd, −90 = Ost, +90 = West, ±180 = Nord." },
+                { "type": "Label", "caption": "Quellen: Open-Meteo (Standard — kostenlos, kein API-Key; Leistung = kWp × Einstrahlung/1000 × Performance-Ratio mit Temperatur-Derating). Forecast.Solar (liefert Leistung direkt, Gratis-Tarif ratenbegrenzt). Solcast (API-Key + Resource-ID je Generator, dafür echtes P10/P90-Band)." },
+                { "type": "Label", "caption": "Selbstkalibrierung (Open-Meteo): vergleicht die gemessene Erzeugung (PowerVar je Generator, archiviert) mit der aus vergangener Einstrahlung modellierten und lernt einen Korrekturfaktor — fängt Verschattung, Verschmutzung und reale Modulleistung. Zusätzlich manueller Faktor je Generator." },
+                { "type": "Label", "caption": "Einheiten: W/kW der gemessenen Leistung wird automatisch erkannt (Profil-Suffix, sonst Größenordnung); bei Bedarf manuell festlegen." },
+                { "type": "Label", "caption": "Ausgaben: je Tag ein JSON-Profil (p10/p50/p90/mean in W je Slot, kwh) plus kWh-Variablen. EMS-Zugriff: PVF_GetForecast($id, 0..2). Bei Open-Meteo/Forecast.Solar ist P10=P50=P90 (Linie); ein echtes Band liefert nur Solcast." },
+                { "type": "Label", "caption": "Prognosegüte: vergleicht die Day-Ahead-Prognose vergangener Tage (Snapshots) mit der gemessenen Erzeugung. Bias + = überschätzt (z.B. Verschattung → Kalibrierung aktivieren), |Ø-Fehler| = mittlerer Betragsfehler. Braucht PowerVar je Generator." },
+                { "type": "Label", "caption": "Tipps: Auflösung deckungsgleich zur Lastprognose wählen (Energiebilanz-Kachel). Die Vorhersage wird alle paar Stunden neu geladen — Intervall 3–6 h reicht; Forecast.Solar nicht zu häufig abrufen (Rate-Limit)." }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
             "caption": "⚙️ Allgemein",
             "expanded": true,
             "items": [
