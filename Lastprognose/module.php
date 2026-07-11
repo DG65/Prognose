@@ -135,6 +135,8 @@ class Lastprognose extends IPSModule
         $this->RegisterVariableFloat( 'LFC_WPkWhDayAfter','Erwartung WP/Klima übermorgen (kWh)','~Electricity', 72);
         $this->RegisterVariableString('LFC_Status',    'Status',                    '', 80);
         $this->RegisterVariableInteger('LFC_LastUpdate','Letzte Berechnung',        '~UnixTimestamp', 90);
+        $this->RegisterVariableFloat( 'LFC_ErrorMAPE', 'Prognosefehler |Ø| (%)',    '', 92);
+        $this->RegisterVariableString('LFC_Accuracy',  'Prognosegüte (Soll vs. Ist)','', 94);
 
         // ── Timer ───────────────────────────────────────────────────
         // Tages-Snapshots der Prognose (für spätere Soll-vs-Ist-Kontrolle je Tag)
@@ -192,6 +194,7 @@ class Lastprognose extends IPSModule
                 $this->SetValue($kwhIds[$offset], round($fc['kwh'], 2));
             }
             $this->saveSnapshot($fcs);
+            $this->evaluateAccuracy();
 
             // Optional: separate WP-/Klima-Prognose für heute/morgen/übermorgen
             $wpIds = ['LFC_WPkWhToday', 'LFC_WPkWhTomorrow', 'LFC_WPkWhDayAfter'];
@@ -311,6 +314,42 @@ class Lastprognose extends IPSModule
     {
         $snaps = json_decode($this->ReadAttributeString('LFC_Snapshots'), true);
         return (is_array($snaps) && isset($snaps[$date])) ? $snaps[$date] : [];
+    }
+
+    /**
+     * Prognosegüte: vergleicht je vergangenem Tag (bis 7 zurück) den
+     * Day-Ahead-Snapshot (Soll-kWh) mit dem gemessenen Ist aus dem Archiv
+     * (identisch zum Trainings-Ziel: Hauptverbrauch minus Abzugsliste).
+     * Bias = mittlere vorzeichenbehaftete Abweichung, |Ø| = mittlerer Betrag.
+     */
+    private function evaluateAccuracy()
+    {
+        $snaps = json_decode($this->ReadAttributeString('LFC_Snapshots'), true);
+        if (!is_array($snaps)) { $snaps = []; }
+
+        $errs = [];
+        for ($d = 1; $d <= 7; $d++) {
+            $ts   = strtotime('today -' . $d . ' days');
+            $date = date('Y-m-d', $ts);
+            if (!isset($snaps[$date])) { continue; }
+            $soll = (float)($snaps[$date]['kwh'] ?? 0);
+            if ($soll <= 0) { continue; }
+            $prof = $this->getDayProfile($ts);
+            if ($prof === null) { continue; }
+            $ist = array_sum($prof) * $this->slotHours() / 1000.0;
+            if ($ist < 0.5) { continue; }
+            $errs[] = ($soll - $ist) / $ist * 100.0;
+        }
+
+        if (count($errs) === 0) {
+            $this->SetValue('LFC_Accuracy', 'Noch keine auswertbaren Tage (Snapshots sammeln sich seit v0.14)');
+            return;
+        }
+        $bias = array_sum($errs) / count($errs);
+        $mape = array_sum(array_map('abs', $errs)) / count($errs);
+        $this->SetValue('LFC_ErrorMAPE', round($mape, 1));
+        $this->SetValue('LFC_Accuracy', sprintf('%d Tage: Bias %+.1f %% · |Ø-Fehler| %.1f %%', count($errs), $bias, $mape));
+        $this->log(LFC_LOG_BASIC, sprintf('Prognosegüte (%d Tage): Bias %+.1f %%, MAPE %.1f %%', count($errs), $bias, $mape));
     }
 
     /**

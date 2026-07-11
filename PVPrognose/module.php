@@ -78,6 +78,8 @@ class PVPrognose extends IPSModule
         $this->RegisterVariableFloat( 'PVF_kWhDayAfter', 'Erwartete PV übermorgen (kWh)','~Electricity', 60);
         $this->RegisterVariableString('PVF_Status',    'Status',                    '', 70);
         $this->RegisterVariableInteger('PVF_LastUpdate','Letzte Berechnung',        '~UnixTimestamp', 80);
+        $this->RegisterVariableFloat( 'PVF_ErrorMAPE', 'Prognosefehler |Ø| (%)',    '', 82);
+        $this->RegisterVariableString('PVF_Accuracy',  'Prognosegüte (Soll vs. Ist)','', 84);
 
         // Tages-Snapshots der Prognose (für spätere Soll-vs-Ist-Kontrolle je Tag)
         $this->RegisterAttributeString('PVF_Snapshots', '');
@@ -135,6 +137,7 @@ class PVPrognose extends IPSModule
             $this->SetValue($kwhIds[$offset], round($fc['kwh'], 2));
         }
         $this->saveSnapshot($fcs);
+        $this->evaluateAccuracy();
 
         $this->SetValue('PVF_LastUpdate', time());
         $this->SetValue('PVF_Status', sprintf(
@@ -238,6 +241,52 @@ class PVPrognose extends IPSModule
     {
         $snaps = json_decode($this->ReadAttributeString('PVF_Snapshots'), true);
         return (is_array($snaps) && isset($snaps[$date])) ? $snaps[$date] : [];
+    }
+
+    /**
+     * Prognosegüte: vergleicht je vergangenem Tag (bis 7 zurück) den
+     * Day-Ahead-Snapshot (Soll-kWh) mit der gemessenen PV-Erzeugung
+     * (Summe der Generator-Leistungsvariablen aus dem Archiv).
+     */
+    private function evaluateAccuracy()
+    {
+        $snaps = json_decode($this->ReadAttributeString('PVF_Snapshots'), true);
+        if (!is_array($snaps)) { $snaps = []; }
+
+        $gens = [];
+        foreach ($this->pvGenerators() as $g) {
+            if ($g['powervar'] > 0 && IPS_VariableExists($g['powervar'])) { $gens[] = $g['powervar']; }
+        }
+        if (count($gens) === 0) {
+            $this->SetValue('PVF_Accuracy', 'Keine gemessene Leistung (PowerVar je Generator) konfiguriert');
+            return;
+        }
+
+        $errs = [];
+        for ($d = 1; $d <= 7; $d++) {
+            $ts   = strtotime('today -' . $d . ' days');
+            $date = date('Y-m-d', $ts);
+            if (!isset($snaps[$date])) { continue; }
+            $soll = (float)($snaps[$date]['kwh'] ?? 0);
+            if ($soll <= 0) { continue; }
+            $ist = 0.0; $any = false;
+            foreach ($gens as $vid) {
+                $k = $this->measuredKwh($vid, $ts);
+                if ($k !== null) { $ist += $k; $any = true; }
+            }
+            if (!$any || $ist < 0.5) { continue; }
+            $errs[] = ($soll - $ist) / $ist * 100.0;
+        }
+
+        if (count($errs) === 0) {
+            $this->SetValue('PVF_Accuracy', 'Noch keine auswertbaren Tage (Snapshots sammeln sich seit v0.14)');
+            return;
+        }
+        $bias = array_sum($errs) / count($errs);
+        $mape = array_sum(array_map('abs', $errs)) / count($errs);
+        $this->SetValue('PVF_ErrorMAPE', round($mape, 1));
+        $this->SetValue('PVF_Accuracy', sprintf('%d Tage: Bias %+.1f %% · |Ø-Fehler| %.1f %%', count($errs), $bias, $mape));
+        $this->log(PVF_LOG_BASIC, sprintf('Prognosegüte (%d Tage): Bias %+.1f %%, MAPE %.1f %%', count($errs), $bias, $mape));
     }
 
     /**

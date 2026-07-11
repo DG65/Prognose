@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.18.0
+
+- **Prognosegüte-Messung (Soll vs. Ist)** in Lastprognose und PV-Prognose: Bei jeder Neuberechnung
+  wird je vergangenem Tag (bis 7 zurück) der Day-Ahead-Snapshot (Soll-kWh) mit dem gemessenen Ist
+  aus dem Archiv verglichen — bei der Last identisch zum Prognoseziel (Hauptverbrauch minus
+  Abzugsliste), bei PV die Summe der Generator-Leistungen. Neue Variablen je Modul:
+  **„Prognosefehler |Ø| (%)"** (mittlerer Betragsfehler) und **„Prognosegüte"** (Text mit Bias =
+  systematischer Abweichung und Tagesanzahl). Grundlage für die kommende Bias-Korrektur und das
+  Residuen-Band; die Werte füllen sich, sobald Snapshots (ab v0.14) für vergangene Tage vorliegen.
+
 ## 0.17.0
 
 - **Automatische W/kW-Erkennung (neuer Standard)**: Die Einheit der Leistungsvariablen wird jetzt
