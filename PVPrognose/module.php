@@ -32,6 +32,8 @@ class PVPrognose extends IPSModule
 {
     // Request-lokales Modell: [offset => 24×{p10,p50,p90} in W]
     private $modelCache = null;
+    // Request-lokaler Cache der automatisch erkannten Einheiten je Variable
+    private $unitCache = [];
 
     // ----------------------------------------------------------------
     //  Lebenszyklus
@@ -60,8 +62,8 @@ class PVPrognose extends IPSModule
         // Selbstkalibrierung (Open-Meteo): gemessen vs. vorhergesagt.
         $this->RegisterPropertyBoolean('PVF_Calibrate',     false);
         $this->RegisterPropertyInteger('PVF_CalibDays',     21);
-        // Einheit der gemessenen Generator-Leistungsvariablen (0=W, 1=kW).
-        $this->RegisterPropertyInteger('PVF_PowerUnit',     0);
+        // Einheit der gemessenen Generator-Leistung: 0=W, 1=kW, 2=automatisch.
+        $this->RegisterPropertyInteger('PVF_PowerUnit',     2);
 
         // Zeitliche Auflösung (60/30/15 min). Quellen liefern stündlich;
         // feinere Stufen werden interpoliert (zur Deckung mit der Lastprognose).
@@ -580,10 +582,48 @@ class PVPrognose extends IPSModule
         $end   = $start + 86400 - 1;
         $rows  = AC_GetAggregatedValues($aid, $varID, 0, $start, $end, 0); // stündlich
         if (!is_array($rows) || count($rows) === 0) { return null; }
-        $f  = ($this->ReadPropertyInteger('PVF_PowerUnit') === 1) ? 1000.0 : 1.0; // kW → W
+        $f  = $this->varPowerFactor($varID); // Einheit → W
         $wh = 0.0;
         foreach ($rows as $r) { $wh += (float)$r['Avg'] * $f; } // Ø-W × 1 h = Wh
         return $wh / 1000.0;
+    }
+
+    /** Faktor zur Umrechnung nach W: 0=W, 1=kW, 2=automatisch je Variable. */
+    private function varPowerFactor(int $vid): float
+    {
+        $mode = $this->ReadPropertyInteger('PVF_PowerUnit');
+        if ($mode === 0) { return 1.0; }
+        if ($mode === 1) { return 1000.0; }
+        if (isset($this->unitCache[$vid])) { return $this->unitCache[$vid]; }
+        $f = $this->autoPowerFactor($vid);
+        $this->unitCache[$vid] = $f;
+        return $f;
+    }
+
+    /**
+     * Automatische Einheiten-Erkennung: 1) Profil-Suffix („W"/„kW"),
+     * 2) Größenordnung der Tagesmaxima (letzte 7 Tage, < 100 → kW), 3) W.
+     */
+    private function autoPowerFactor(int $vid): float
+    {
+        $v    = IPS_GetVariable($vid);
+        $prof = ($v['VariableCustomProfile'] !== '') ? $v['VariableCustomProfile'] : $v['VariableProfile'];
+        if ($prof !== '' && IPS_VariableProfileExists($prof)) {
+            $suffix = strtolower(trim(IPS_GetVariableProfile($prof)['Suffix']));
+            if ($suffix === 'kw') { return 1000.0; }
+            if ($suffix === 'w')  { return 1.0; }
+            if ($suffix === 'mw') { return 1000000.0; }
+        }
+        $ids = IPS_GetInstanceListByModuleID(PVF_ARCHIVE_GUID);
+        if (count($ids) > 0) {
+            $rows = @AC_GetAggregatedValues($ids[0], $vid, 1, strtotime('-7 days'), time(), 0);
+            if (is_array($rows) && count($rows) > 0) {
+                $max = 0.0;
+                foreach ($rows as $r) { $max = max($max, (float)$r['Max']); }
+                if ($max > 0 && $max < 100) { return 1000.0; }
+            }
+        }
+        return 1.0;
     }
 
     private function httpGetJson(string $url, array $headers = [])

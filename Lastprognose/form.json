@@ -47,11 +47,16 @@
                 {
                     "type": "Select",
                     "name": "LFC_PowerUnit",
-                    "caption": "Einheit der Leistungsvariablen (gilt für Hausverbrauch, Abzugsliste und Geräte)",
+                    "caption": "Einheit der Leistungsvariablen (Hausverbrauch, Abzugsliste, Geräte)",
                     "options": [
+                        { "caption": "Automatisch erkennen (Profil/Größenordnung, je Variable)", "value": 2 },
                         { "caption": "W (Watt)",       "value": 0 },
                         { "caption": "kW (Kilowatt)",  "value": 1 }
                     ]
+                },
+                {
+                    "type": "Label",
+                    "caption": "Automatik: nutzt das Variablenprofil (Suffix W/kW), sonst die Größenordnung der letzten Tage. Bei exotischen Variablen ohne Profil ggf. manuell festlegen."
                 },
                 {
                     "type": "Label",

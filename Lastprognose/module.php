@@ -53,6 +53,8 @@ class Lastprognose extends IPSModule
 {
     // Request-lokaler Cache der Prognosetemperaturen [0=>heute,1=>morgen,2=>übermorgen]
     private $fcTempCache = null;
+    // Request-lokaler Cache der automatisch erkannten Einheiten je Variable
+    private $unitCache = [];
 
     // ----------------------------------------------------------------
     //  Modul-Lebenszyklus
@@ -70,8 +72,8 @@ class Lastprognose extends IPSModule
         // ── Datenquellen (Archiv) ───────────────────────────────────
         // Hauptverbrauch als LEISTUNG (W) — z.B. EMS_HousePower.
         $this->RegisterPropertyInteger('VAR_Consumption',    0);
-        // Einheit ALLER Leistungsvariablen (Hausverbrauch, Abzugsliste, Geräte).
-        $this->RegisterPropertyInteger('LFC_PowerUnit',      0); // 0=W, 1=kW
+        // Einheit der Leistungsvariablen: 0=W, 1=kW, 2=automatisch je Variable.
+        $this->RegisterPropertyInteger('LFC_PowerUnit',      2);
         // Optional abzuziehende Verbraucher (WP, Wallbox …) als Liste.
         $this->RegisterPropertyString('ExcludeVars',         '[]');
         // Außentemperatur (Historie, °C).
@@ -535,10 +537,20 @@ class Lastprognose extends IPSModule
                 $h = (int)date('G', $r['TimeStamp']);
                 if ($h >= 0 && $h < $slots) { $profile[$h] = (float)$r['Avg']; }
             }
-            return $this->finishProfile($profile, $slots);
+            return $this->scaleProfile($this->finishProfile($profile, $slots), $varID);
         }
 
-        return $this->integratedProfile($aid, $varID, $start, $end, $slots);
+        return $this->scaleProfile($this->integratedProfile($aid, $varID, $start, $end, $slots), $varID);
+    }
+
+    /** Profil auf W normieren (Einheit je Variable: manuell oder automatisch). */
+    private function scaleProfile($profile, int $varID)
+    {
+        if (!is_array($profile)) { return $profile; }
+        $f = $this->varPowerFactor($varID);
+        if ($f === 1.0) { return $profile; }
+        foreach ($profile as $i => $v) { if ($v !== null) { $profile[$i] = $v * $f; } }
+        return $profile;
     }
 
     /**
@@ -596,21 +608,17 @@ class Lastprognose extends IPSModule
         return $this->finishProfile($profile, $slots);
     }
 
-    /**
-     * Mindestabdeckung prüfen, Lücken per Nachbarwert füllen und auf W
-     * normieren (zentraler Punkt für die W/kW-Einheitenumrechnung).
-     */
+    /** Mindestabdeckung prüfen und Lücken per Nachbarwert füllen. */
     private function finishProfile(array $profile, int $slots)
     {
         $have = 0;
         foreach ($profile as $v) { if ($v !== null) { $have++; } }
         if ($have < $slots / 2) { return null; }
 
-        $f = $this->powerFactor();
         $last = 0.0;
         for ($s = 0; $s < $slots; $s++) {
             if ($profile[$s] === null) { $profile[$s] = $last; }
-            else { $last = $profile[$s] * $f; $profile[$s] = $last; }
+            else { $last = $profile[$s]; }
         }
         return $profile;
     }
@@ -843,10 +851,49 @@ class Lastprognose extends IPSModule
         return $this->ReadPropertyBoolean('LFC_PresenceInvert') ? (1.0 - $pres) : $pres;
     }
 
-    /** Faktor zur Umrechnung der Leistungsvariablen nach W (0=W, 1=kW). */
-    private function powerFactor(): float
+    /**
+     * Faktor zur Umrechnung einer Leistungsvariablen nach W.
+     * 0=W, 1=kW, 2=automatisch je Variable (Profil-Suffix, sonst Größenordnung).
+     */
+    private function varPowerFactor(int $vid): float
     {
-        return ($this->ReadPropertyInteger('LFC_PowerUnit') === 1) ? 1000.0 : 1.0;
+        $mode = $this->ReadPropertyInteger('LFC_PowerUnit');
+        if ($mode === 0) { return 1.0; }
+        if ($mode === 1) { return 1000.0; }
+
+        if (isset($this->unitCache[$vid])) { return $this->unitCache[$vid]; }
+        $f = $this->autoPowerFactor($vid);
+        $this->unitCache[$vid] = $f;
+        $this->log(LFC_LOG_VERBOSE, 'Einheit Variable ' . $vid . ': ' . ($f == 1000.0 ? 'kW' : 'W') . ' (automatisch)');
+        return $f;
+    }
+
+    /**
+     * Automatische Einheiten-Erkennung: 1) Suffix des Variablenprofils
+     * („W"/„kW"), 2) Größenordnung der Tagesmaxima der letzten 7 Tage
+     * (< 100 nur als kW plausibel), 3) Default W.
+     */
+    private function autoPowerFactor(int $vid): float
+    {
+        $v    = IPS_GetVariable($vid);
+        $prof = ($v['VariableCustomProfile'] !== '') ? $v['VariableCustomProfile'] : $v['VariableProfile'];
+        if ($prof !== '' && IPS_VariableProfileExists($prof)) {
+            $suffix = strtolower(trim(IPS_GetVariableProfile($prof)['Suffix']));
+            if ($suffix === 'kw') { return 1000.0; }
+            if ($suffix === 'w')  { return 1.0; }
+            if ($suffix === 'mw') { return 1000000.0; }
+        }
+
+        $aid = $this->getArchiveID();
+        if ($aid > 0) {
+            $rows = @AC_GetAggregatedValues($aid, $vid, 1 /* täglich */, strtotime('-7 days'), time(), 0);
+            if (is_array($rows) && count($rows) > 0) {
+                $max = 0.0;
+                foreach ($rows as $r) { $max = max($max, (float)$r['Max']); }
+                if ($max > 0 && $max < 100) { return 1000.0; }
+            }
+        }
+        return 1.0;
     }
 
     // ----------------------------------------------------------------

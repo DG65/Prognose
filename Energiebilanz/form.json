@@ -52,6 +52,7 @@
             "name": "PowerUnit",
             "caption": "Einheit der Ist-Leistungsvariablen",
             "options": [
+                { "caption": "Automatisch erkennen (Profil/Größenordnung)", "value": 2 },
                 { "caption": "W (Watt)",      "value": 0 },
                 { "caption": "kW (Kilowatt)", "value": 1 }
             ]

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.17.0
+
+- **Automatische W/kW-Erkennung (neuer Standard)**: Die Einheit der Leistungsvariablen wird jetzt
+  **je Variable automatisch** erkannt — zuerst über das Variablenprofil (Suffix „W"/„kW"/„MW"),
+  sonst über die Größenordnung der Tagesmaxima der letzten 7 Tage (Maximum < 100 ist nur als kW
+  plausibel), im Zweifel W. Damit funktionieren auch **gemischte** Installationen (z.B. Hausverbrauch
+  in W, Wärmepumpe in kW) ohne Konfiguration. Die manuelle Auswahl W/kW bleibt als Übersteuerung für
+  Grenzfälle (Variablen ohne Profil mit ungewöhnlicher Größenordnung) erhalten. Gilt in allen drei
+  Modulen (Lastprognose, PV-Prognose, Energiebilanz).
+
 ## 0.16.0
 
 - **Einheit der Leistungsvariablen wählbar (W/kW)** — Community-Wunsch: wer seine Leistung seit

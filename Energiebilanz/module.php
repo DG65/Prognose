@@ -12,6 +12,9 @@ declare(strict_types=1);
  */
 class Energiebilanz extends IPSModule
 {
+    // Request-lokaler Cache der automatisch erkannten Einheiten je Variable
+    private $unitCache = [];
+
     private const SOURCE_PV   = '{257DD4E8-9705-462E-89FC-56D0A1038353}'; // PVForecast
     private const SOURCE_LOAD = '{DC5AD508-507F-40EA-8630-0959AED83050}'; // LoadForecast
 
@@ -41,8 +44,8 @@ class Energiebilanz extends IPSModule
         // Ist-Werte (momentane Leistung) — optional, für Prognose vs. Realität.
         $this->RegisterPropertyInteger('ActualPV',   0);
         $this->RegisterPropertyInteger('ActualLoad', 0);
-        // Einheit der Ist-Leistungsvariablen (0=W, 1=kW).
-        $this->RegisterPropertyInteger('PowerUnit',  0);
+        // Einheit der Ist-Leistungsvariablen: 0=W, 1=kW, 2=automatisch.
+        $this->RegisterPropertyInteger('PowerUnit',  2);
         // Gemessenen Tagesverlauf (heute) als Overlay-Linie zeichnen.
         $this->RegisterPropertyBoolean('ShowActualPV',   false);
         $this->RegisterPropertyBoolean('ShowActualLoad', false);
@@ -301,13 +304,45 @@ class Energiebilanz extends IPSModule
     {
         $vid = $this->ReadPropertyInteger($prop);
         if ($vid <= 0 || !IPS_VariableExists($vid)) { return null; }
-        return (float) GetValue($vid) * $this->powerFactor();
+        return (float) GetValue($vid) * $this->varPowerFactor($vid);
     }
 
-    /** Faktor zur Umrechnung der Ist-Leistungsvariablen nach W (0=W, 1=kW). */
-    private function powerFactor(): float
+    /** Faktor zur Umrechnung nach W: 0=W, 1=kW, 2=automatisch je Variable. */
+    private function varPowerFactor(int $vid): float
     {
-        return ($this->ReadPropertyInteger('PowerUnit') === 1) ? 1000.0 : 1.0;
+        $mode = $this->ReadPropertyInteger('PowerUnit');
+        if ($mode === 0) { return 1.0; }
+        if ($mode === 1) { return 1000.0; }
+        if (isset($this->unitCache[$vid])) { return $this->unitCache[$vid]; }
+        $f = $this->autoPowerFactor($vid);
+        $this->unitCache[$vid] = $f;
+        return $f;
+    }
+
+    /**
+     * Automatische Einheiten-Erkennung: 1) Profil-Suffix („W"/„kW"),
+     * 2) Größenordnung der Tagesmaxima (letzte 7 Tage, < 100 → kW), 3) W.
+     */
+    private function autoPowerFactor(int $vid): float
+    {
+        $v    = IPS_GetVariable($vid);
+        $prof = ($v['VariableCustomProfile'] !== '') ? $v['VariableCustomProfile'] : $v['VariableProfile'];
+        if ($prof !== '' && IPS_VariableProfileExists($prof)) {
+            $suffix = strtolower(trim(IPS_GetVariableProfile($prof)['Suffix']));
+            if ($suffix === 'kw') { return 1000.0; }
+            if ($suffix === 'w')  { return 1.0; }
+            if ($suffix === 'mw') { return 1000000.0; }
+        }
+        $aid = $this->getArchiveID();
+        if ($aid > 0) {
+            $rows = @AC_GetAggregatedValues($aid, $vid, 1, strtotime('-7 days'), time(), 0);
+            if (is_array($rows) && count($rows) > 0) {
+                $max = 0.0;
+                foreach ($rows as $r) { $max = max($max, (float)$r['Max']); }
+                if ($max > 0 && $max < 100) { return 1000.0; }
+            }
+        }
+        return 1.0;
     }
 
     /**
@@ -351,7 +386,7 @@ class Energiebilanz extends IPSModule
         $aid = $this->getArchiveID();
         if ($aid === 0) { return null; }
 
-        $f = $this->powerFactor();
+        $f = $this->varPowerFactor($vid);
 
         // 60 min: stündliches Aggregat (exakt, leichtgewichtig).
         if ($slots <= 24) {
