@@ -33,12 +33,24 @@
             var data = (typeof payload === 'string') ? JSON.parse(payload) : payload;
             if (!data) { return; }
             lastData = data;
+            // Hintergrundfarbe gilt für die GANZE Kachel/Seite, nicht nur das Diagramm.
+            document.body.style.background = data.bg ? data.bg : 'transparent';
+            document.documentElement.style.background = data.bg ? data.bg : 'transparent';
             render();
         }
 
         function pad(x) { return (x < 10 ? '0' : '') + x; }
         function kw(w) { return (w / 1000).toFixed(2); }
         function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+        /** Textfarben nach Helligkeit des konfigurierten Hintergrunds wählen. */
+        function isDarkColor(hex) {
+            var m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+            if (!m) { return null; }
+            var n = parseInt(m[1], 16);
+            var lum = 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+            return lum < 140;
+        }
 
         function addScript(src, cb) {
             var s = document.createElement('script');
@@ -84,7 +96,11 @@
         // ---- gemeinsame Datenaufbereitung -------------------------------
         function prepData() {
             var data = lastData;
-            var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            // Mit konfiguriertem Hintergrund entscheidet dessen Helligkeit über die
+            // Textfarben; ohne (transparent) der Hell-/Dunkelmodus des Geräts.
+            var bgDark = isDarkColor(data.bg);
+            var dark = (bgDark !== null) ? bgDark
+                     : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
             var D = {
                 data: data,
                 height: (data.height && data.height >= 180) ? data.height : 360,
@@ -160,7 +176,7 @@
             if (D.nowX != null) { plotLines.push({ value: D.nowX, color: MUTED, width: 1, dashStyle: 'Dash', zIndex: 4 }); }
 
             var options = {
-                chart: { backgroundColor: data.bg ? data.bg : 'transparent', height: canvasH, spacingTop: 10, spacingBottom: 2, marginLeft: 46, marginRight: 14, style: { fontFamily: D.font }, animation: false },
+                chart: { backgroundColor: 'transparent', height: canvasH, spacingTop: 10, spacingBottom: 2, marginLeft: 46, marginRight: 14, style: { fontFamily: D.font }, animation: false },
                 title: { text: undefined }, credits: { enabled: false }, exporting: { enabled: false },
                 legend: { enabled: true, align: 'right', verticalAlign: 'top', floating: false, margin: 16, padding: 0, x: -2, y: 0, useHTML: true, symbolRadius: 6, itemStyle: { color: TEXT, fontSize: fpx(11), fontWeight: '400' }, itemHoverStyle: { color: TEXT }, labelFormatter: function () {
                     var ex = '';
@@ -281,7 +297,7 @@
             if (dots.length) { series.push({ type: 'scatter', data: dots, symbolSize: 11, z: 6, silent: true, animation: false }); }
 
             var option = {
-                backgroundColor: D.data.bg ? D.data.bg : 'transparent',
+                backgroundColor: 'transparent',
                 textStyle: { fontFamily: D.font, color: D.TEXT },
                 grid: { left: 46, right: 14, top: 8, bottom: 22, containLabel: false },
                 animation: false,

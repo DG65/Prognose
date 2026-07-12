@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.19.1
+
+- **Fix: Hintergrundfarbe deckte nicht die ganze Kachel ab.** Die konfigurierte Farbe wurde nur ans
+  Diagramm übergeben — Legende, Tagesstreifen und Ränder blieben transparent (im WebView/Popup also
+  weiß). Jetzt gilt die Farbe für die gesamte Fläche. Zusätzlich richten sich die **Textfarben nach
+  der Helligkeit der gewählten Hintergrundfarbe** (dunkler Hintergrund → helle Schrift und umgekehrt)
+  statt nach dem Hell-/Dunkelmodus des Geräts — vorher konnte helle Schrift auf weißem Grund landen.
+  Ohne konfigurierte Farbe (transparent) bleibt alles wie gehabt (IPS-Theme/Gerätemodus).
+
 ## 0.19.0
 
 - **Energiebilanz als eigenständige Webseite (WebHook)** — für IPSView-Popups und jeden Browser:
