@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20-beta (Beta-Kanal – in Entwicklung)
+
+Dieser Stand läuft im **Beta-Kanal** und trägt daher das Kürzel `-beta` in der Version. Neue
+Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in den Stable-Kanal
+übernommen.
+
 ## 0.19.1
 
 - **Fix: Hintergrundfarbe deckte nicht die ganze Kachel ab.** Die konfigurierte Farbe wurde nur ans
