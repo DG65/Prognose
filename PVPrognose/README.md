@@ -1,0 +1,70 @@
+# PVForecast (PV-Prognose)
+
+**Physikbasierte PV-Erzeugungsprognose** für 1–3 Tage, je Generator (Dachfläche/MPP-Tracker), über
+eine Wetter-/Solar-API. Liefert JSON-Profile zur direkten Nutzung durch ein EMS. Prefix: `PVF`.
+
+## Funktionsweise
+
+Für jeden Generator wird aus **Neigung**, **Azimut** und **kWp** mit den Einstrahlungsdaten einer
+API die erwartete Leistung berechnet; alle Generatoren werden zur Gesamt-PV summiert.
+
+**Azimut-Konvention:** 0° = Süd, −90° = Ost, +90° = West, ±180° = Nord.
+**Neigung:** 0° = flach, 90° = senkrecht (typisches Satteldach 30–45°).
+
+## Datenquellen
+
+| Quelle | Eigenschaften |
+|---|---|
+| **Open-Meteo** (Standard) | Kostenlos, kein API-Key. Leistung = kWp × Einstrahlung/1000 × Performance-Ratio mit Temperatur-Derating. |
+| **Forecast.Solar** | Liefert Leistung direkt; Gratis-Tarif ratenbegrenzt (nicht zu häufig abrufen). |
+| **Solcast** | API-Key + Resource-ID je Generator; liefert als einzige Quelle ein echtes **P10/P90-Band**. |
+
+Bei Open-Meteo/Forecast.Solar ist P10 = P50 = P90 (eine Linie ohne Band).
+
+## Voraussetzungen
+
+- IP-Symcon ab **7.0**
+- Pro Generator: Neigung, Azimut, kWp
+- Für die Selbstkalibrierung und die Prognosegüte: eine **archivierte Leistungsvariable** je
+  Generator (`PowerVar`, Einheit W/kW automatisch erkannt)
+
+## Einrichtung
+
+| Bereich | Bedeutung |
+|---|---|
+| **Generatoren** | Je Dachfläche/MPP-Tracker eine Zeile (Name, Neigung, Azimut, kWp, optional PowerVar/Faktor/SolcastID). |
+| **Quelle** | Open-Meteo / Forecast.Solar / Solcast. |
+| **Selbstkalibrierung** (Open-Meteo) | Vergleicht gemessene mit modellierter Erzeugung und lernt einen Korrekturfaktor – fängt Verschattung, Verschmutzung und reale Modulleistung. |
+| **Auflösung** | 60 / 30 / 15 Minuten – idealerweise deckungsgleich zur Lastprognose. |
+
+## Statusvariablen
+
+| Ident | Beschreibung |
+|---|---|
+| `PVF_Today` / `PVF_Tomorrow` / `PVF_DayAfter` | Prognoseprofil als JSON (`p10/p50/p90/mean` in W je Slot, `kwh`, `slots`, `resolution`) |
+| `PVF_kWhToday` / `…Tomorrow` / `…DayAfter` | Tageserzeugung der Prognose (kWh) |
+| `PVF_ErrorMAPE` | Mittlerer Betragsfehler der letzten Tage (%) |
+| `PVF_Accuracy` | Prognosegüte als Text: Tagesanzahl, Bias, \|Ø-Fehler\| |
+| `PVF_Status` / `PVF_LastUpdate` | Status und Zeitpunkt der letzten Berechnung |
+
+## Prognosegüte (Soll vs. Ist)
+
+Vergleicht die frühere Day-Ahead-Prognose vergangener Tage (Snapshots) mit der gemessenen Erzeugung
+(Summe der `PowerVar`). **Bias** + bedeutet überschätzt (z. B. Verschattung → Kalibrierung
+aktivieren), **\|Ø-Fehler\|** ist der mittlere Betrag.
+
+## Öffentliche Funktionen
+
+```php
+// Prognose eines Tages holen: $offset 0=heute, 1=morgen, 2=übermorgen
+$fc = PVF_GetForecast(int $InstanzID, int $offset);
+
+// Gespeicherte Prognose (Soll) eines vergangenen Tages ('Y-m-d')
+$snap = PVF_GetSnapshot(int $InstanzID, string $date); // [] wenn kein Snapshot
+
+// Sofortige Neuberechnung / Neuladen der Vorhersage
+PVF_Rebuild(int $InstanzID);
+```
+
+Teil der **[EnergiePrognose-Suite](https://github.com/DG65/Prognose)** – zusammen mit *LoadForecast*
+und der *Energiebilanz*-Kachel.

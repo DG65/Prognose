@@ -6,6 +6,11 @@ Dieser Stand läuft im **Beta-Kanal** und trägt daher das Kürzel `-beta` in de
 Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in den Stable-Kanal
 übernommen.
 
+- **README je Modul** (Lastprognose, PV-Prognose, Energiebilanz): Funktionsweise, Voraussetzungen,
+  Einrichtung, Statusvariablen, Prognosegüte und öffentliche Funktionen – für die Darstellung im
+  Module Store und auf GitHub.
+- `library.json`: Feld `compatibility` (mind. IP-Symcon 7.0) ergänzt.
+
 ## 0.19.1
 
 - **Fix: Hintergrundfarbe deckte nicht die ganze Kachel ab.** Die konfigurierte Farbe wurde nur ans

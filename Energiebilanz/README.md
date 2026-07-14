@@ -1,0 +1,61 @@
+# Energiebilanz (Kachel)
+
+Kombinierte **Visualisierungskachel**, die PV-Erzeugung und Verbrauch gemeinsam (oder einzeln) über
+bis zu 3 Tage darstellt – der EMS-Blick: Erzeugung gegen Verbrauch, die Lücke ist
+Netzbezug/Einspeisung. Prefix: `EFTILE`.
+
+## Funktionsweise
+
+Die Kachel liest die Prognosevariablen von **[LoadForecast](../Lastprognose)** und
+**[PVForecast](../PVPrognose)** und zeichnet:
+
+- **Prognose (Soll):** P50-Linien mit P10–P90-Unsicherheitsband
+- **Ist-Werte** (optional): Momentanwert in der Legende, Punkt auf der Jetzt-Linie, gemessener
+  Tagesverlauf als gestrichelte Linie und Ist-kWh unter den Soll-Werten
+- **Gestern** (optional): gemessene Kurve des Vortags plus – sobald ein Prognose-Snapshot vom
+  Vortag existiert – das damalige Soll (Treffer-Kontrolle)
+- **Tagesenergie** je Tag (kWh) unter dem Diagramm
+
+Beim Überfahren/Antippen werden Werte und Saldo zur Uhrzeit angezeigt.
+
+## Voraussetzungen
+
+- IP-Symcon ab **7.0** (HTML-Tile-Visualisierung)
+- Mindestens eine der beiden Prognose-Instanzen (LoadForecast und/oder PVForecast)
+- Für Ist-Werte: je eine archivierte Leistungsvariable (Einheit W/kW automatisch erkannt)
+- Internet auf dem Anzeigegerät (die Diagramm-Bibliothek wird per CDN geladen)
+
+## Einrichtung
+
+| Bereich | Bedeutung |
+|---|---|
+| **Quellen** | Werden automatisch erkannt (je eine PV- und Lastprognose-Instanz); nur bei mehreren Instanzen manuell wählen. Jede Reihe per Schalter oder Legenden-Klick ausblendbar. |
+| **Ist-Werte** | Momentane Leistungsvariablen für PV und Verbrauch; optional der gemessene Tagesverlauf als Linie. |
+| **Gestern** | Vortag mit Ist-Kurve und (falls vorhanden) Snapshot-Soll. |
+| **Diagramm-Engine** | **ECharts** (Open Source, auch kommerziell kostenlos) oder **Highcharts** (nur privat/nicht-kommerziell kostenlos). |
+| **Darstellung** | Diagrammhöhe, Linienstärke, Glättung, Band-Transparenz, Gitter, Y-Achse, Farben, Schriftart/-größe. |
+
+## Als eigenständige Webseite (IPSView / Popup)
+
+IPSView rendert HTML-SDK-Kacheln nicht direkt. Das Modul stellt die Kachel daher zusätzlich als
+eigenständige Seite über einen **WebHook** bereit:
+
+```
+http://<IPS-IP>:3777/hook/energiebilanz<InstanzID>
+```
+
+Auto-Aktualisierung alle 30 s (`?json=1` liefert nur die Daten). In IPSView ein **WebView-Element**
+auf eine Popup-Seite legen und diese URL eintragen. Die konkrete URL steht auch in der Instanz-Doku.
+
+> **Hinweis:** WebHooks sind im lokalen Netz ohne Anmeldung erreichbar.
+
+**Empfohlene Popup-Größe:** ca. **1000 × 470 px** bei 3 Tagen (Höhe = eingestellte Diagrammhöhe
++ ~100 px für Legende und Tagesstreifen).
+
+## Hinweis: Hintergrundfarbe
+
+Wird eine Hintergrundfarbe gesetzt, gilt sie für die gesamte Kachel, und die Textfarben richten sich
+nach deren Helligkeit. Ohne gesetzte Farbe (transparent) folgt die Kachel dem Hell-/Dunkelmodus des
+Anzeigegeräts bzw. dem IPS-Theme.
+
+Teil der **[EnergiePrognose-Suite](https://github.com/DG65/Prognose)**.
