@@ -372,13 +372,15 @@ class PVPrognose extends IPSModule
         if (is_array($list)) {
             foreach ($list as $row) {
                 $out[] = [
-                    'name'    => (string)($row['Name'] ?? ''),
-                    'tilt'    => (float)($row['Tilt'] ?? 30),
-                    'az'      => (float)($row['Azimuth'] ?? 0),
-                    'kwp'     => (float)($row['kWp'] ?? 0),
-                    'powervar'=> (int)($row['PowerVar'] ?? 0),
-                    'solcast' => (string)($row['SolcastId'] ?? ''),
-                    'factor'  => (float)($row['Factor'] ?? 1.0),
+                    'name'     => (string)($row['Name'] ?? ''),
+                    'tilt'     => (float)($row['Tilt'] ?? 30),
+                    'az'       => (float)($row['Azimuth'] ?? 0),
+                    'kwp'      => (float)($row['kWp'] ?? 0),
+                    'powervar' => (int)($row['PowerVar'] ?? 0),
+                    'solcast'  => (string)($row['SolcastId'] ?? ''),
+                    'factor'   => (float)($row['Factor'] ?? 1.0),
+                    // Selbstkalibrierung je Generator (fehlt = an → rückwärtskompatibel).
+                    'calibrate'=> (bool)($row['Calibrate'] ?? true),
                 ];
             }
         }
@@ -389,7 +391,11 @@ class PVPrognose extends IPSModule
     private function generatorFactor(array $g, int $src): float
     {
         $f = ($g['factor'] > 0) ? $g['factor'] : 1.0;
-        if ($src === PVF_SRC_OPENMETEO && $this->ReadPropertyBoolean('PVF_Calibrate') && $g['powervar'] > 0) {
+        // Kalibrierung nur wenn Master-Schalter AN und für diesen Generator aktiviert.
+        // Abgeregelte Generatoren (z.B. DC-MPPT mit Strom-/Spannungslimit) hier abschalten
+        // → sie liefern das reine Wetter-Potenzial statt der gedrosselten Messung.
+        if ($src === PVF_SRC_OPENMETEO && $this->ReadPropertyBoolean('PVF_Calibrate')
+            && $g['calibrate'] && $g['powervar'] > 0) {
             $cal = $this->calibrate($g);
             if ($cal !== null) { $f *= $cal; }
         }

@@ -10,6 +10,12 @@ Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in 
   Einrichtung, Statusvariablen, Prognosegüte und öffentliche Funktionen – für die Darstellung im
   Module Store und auf GitHub.
 - `library.json`: Feld `compatibility` (mind. IP-Symcon 7.0) ergänzt.
+- **PV-Prognose: Selbstkalibrierung je Generator schaltbar** (neue Spalte „Kalibrieren" in der
+  Generatorliste). Für **abgeregelte** Generatoren – z. B. DC-MPPT-Laderegler mit Strom- oder
+  Spannungslimit bzw. Batterie-voll-Abregelung – die Kalibrierung ausschalten: Sie liefern dann das
+  reine Wetter-**Potenzial** statt der künstlich gedrosselten Messung (sonst lernt die Prognose
+  einen dauerhaft zu kleinen Ertrag). Der Hauptschalter bleibt als Master; fehlt die Spalte in einer
+  Alt-Konfiguration, ist Kalibrieren wie bisher aktiv.
 
 ## 0.19.1
 

@@ -23,7 +23,7 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Selbstkalibrierung (Open-Meteo): vergleicht die gemessene Erzeugung (PowerVar je Generator, archiviert) mit der aus vergangener Einstrahlung modellierten und lernt einen Korrekturfaktor — fängt Verschattung, Verschmutzung und reale Modulleistung. Zusätzlich manueller Faktor je Generator."
+                    "caption": "Selbstkalibrierung (Open-Meteo): vergleicht die gemessene Erzeugung (PowerVar je Generator, archiviert) mit der aus vergangener Einstrahlung modellierten und lernt einen Korrekturfaktor — fängt Verschattung, Verschmutzung und reale Modulleistung. Je Generator ab-/anschaltbar; für abgeregelte Generatoren (DC-MPPT mit Strom-/Spannungslimit) ausschalten, damit die Prognose das Potenzial statt der gedrosselten Leistung zeigt. Zusätzlich manueller Faktor je Generator."
                 },
                 {
                     "type": "Label",
@@ -187,7 +187,7 @@
             "items": [
                 {
                     "type": "Label",
-                    "caption": "Je Dachfläche/MPP-Tracker eine Zeile mit Neigung, Azimut und kWp. Azimut: 0=Süd, −90=Ost, +90=West, ±180=Nord. Sie werden zur Gesamt-PV summiert. PowerVar (gemessene Leistung, archiviert) wird nur für die Selbstkalibrierung gebraucht; SolcastID nur bei Solcast."
+                    "caption": "Je Dachfläche/MPP-Tracker eine Zeile mit Neigung, Azimut und kWp. Azimut: 0=Süd, −90=Ost, +90=West, ±180=Nord. Sie werden zur Gesamt-PV summiert. PowerVar (gemessene Leistung, archiviert) wird nur für die Selbstkalibrierung gebraucht; SolcastID nur bei Solcast. Spalte „Kalibrieren\": für einen abgeregelten Generator (DC-MPPT mit Limit) abschalten → reines Potenzial."
                 },
                 {
                     "type": "List",
@@ -252,6 +252,15 @@
                             }
                         },
                         {
+                            "caption": "Kalibrieren",
+                            "name": "Calibrate",
+                            "width": "90px",
+                            "add": true,
+                            "edit": {
+                                "type": "CheckBox"
+                            }
+                        },
+                        {
                             "caption": "Leistung (W, archiviert)",
                             "name": "PowerVar",
                             "width": "auto",
@@ -285,7 +294,11 @@
                 {
                     "type": "CheckBox",
                     "name": "PVF_Calibrate",
-                    "caption": "Selbstkalibrierung aktivieren"
+                    "caption": "Selbstkalibrierung aktivieren (Hauptschalter)"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Die Kalibrierung lässt sich je Generator in der Liste oben ab-/anschalten (Spalte „Kalibrieren\"). Abgeregelte Generatoren (z. B. DC-MPPT mit Strom-/Spannungslimit oder Batterie-voll-Abregelung) hier deaktivieren: Sie liefern dann das reine Wetter-Potenzial statt der künstlich gedrosselten Messung – sonst lernt die Prognose einen dauerhaft zu kleinen Ertrag."
                 },
                 {
                     "type": "NumberSpinner",
