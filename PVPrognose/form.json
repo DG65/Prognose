@@ -187,7 +187,7 @@
             "items": [
                 {
                     "type": "Label",
-                    "caption": "Je Dachfläche/MPP-Tracker eine Zeile mit Neigung, Azimut und kWp. Azimut: 0=Süd, −90=Ost, +90=West, ±180=Nord. Sie werden zur Gesamt-PV summiert. PowerVar (gemessene Leistung, archiviert) wird nur für die Selbstkalibrierung gebraucht; SolcastID nur bei Solcast. Spalte „Kalibrieren\": für einen abgeregelten Generator (DC-MPPT mit Limit) abschalten → reines Potenzial."
+                    "caption": "Je Dachfläche/MPP-Tracker eine Zeile mit Neigung, Azimut und kWp. Azimut: 0=Süd, −90=Ost, +90=West, ±180=Nord. Sie werden zur Gesamt-PV summiert. PowerVar (gemessene Leistung, archiviert) wird nur für die Selbstkalibrierung gebraucht; SolcastID nur bei Solcast. Spalte „Kalibrieren\": für einen abgeregelten Generator (DC-MPPT mit Limit) abschalten → reines Potenzial. Module (Anzahl) und Fläche je Modul (m²) fließen nicht in die Prognose ein, sondern ergeben die Gesamtfläche (Statusvariable „Modulfläche gesamt\") — u. a. für das Modul InverterHub (PVF_GetModuleArea)."
                 },
                 {
                     "type": "List",
@@ -237,6 +237,29 @@
                                 "digits": 2,
                                 "minimum": 0,
                                 "maximum": 1000
+                            }
+                        },
+                        {
+                            "caption": "Module (Anzahl)",
+                            "name": "Modules",
+                            "width": "110px",
+                            "add": 0,
+                            "edit": {
+                                "type": "NumberSpinner",
+                                "minimum": 0,
+                                "maximum": 10000
+                            }
+                        },
+                        {
+                            "caption": "Fläche je Modul (m²)",
+                            "name": "ModuleArea",
+                            "width": "140px",
+                            "add": 0,
+                            "edit": {
+                                "type": "NumberSpinner",
+                                "digits": 3,
+                                "minimum": 0,
+                                "maximum": 20
                             }
                         },
                         {

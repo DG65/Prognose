@@ -80,6 +80,8 @@ class PVPrognose extends IPSModule
         $this->RegisterVariableInteger('PVF_LastUpdate','Letzte Berechnung',        '~UnixTimestamp', 80);
         $this->RegisterVariableFloat( 'PVF_ErrorMAPE', 'Prognosefehler |Ø| (%)',    '', 82);
         $this->RegisterVariableString('PVF_Accuracy',  'Prognosegüte (Soll vs. Ist)','', 84);
+        // Gesamte Modulfläche (m²) aus der Generatorliste — z.B. für das Modul InverterHub.
+        $this->RegisterVariableFloat( 'PVF_ModuleArea', 'Modulfläche gesamt (m²)',   '', 86);
 
         // Tages-Snapshots der Prognose (für spätere Soll-vs-Ist-Kontrolle je Tag)
         $this->RegisterAttributeString('PVF_Snapshots', '');
@@ -95,6 +97,9 @@ class PVPrognose extends IPSModule
     public function ApplyChanges()
     {
         parent::ApplyChanges();
+
+        // Gesamte Modulfläche aus der Generatorliste (konfig-abgeleitet).
+        $this->SetValue('PVF_ModuleArea', $this->totalModuleArea());
 
         $active = $this->ReadPropertyBoolean('PVF_Active');
         $hours  = max(1, $this->ReadPropertyInteger('PVF_IntervalHours'));
@@ -231,6 +236,24 @@ class PVPrognose extends IPSModule
     public function GetStatusText()
     {
         return (string) $this->GetValue('PVF_Status');
+    }
+
+    /**
+     * Gesamte Modulfläche (m²) über alle Generatoren = Σ Anzahl × Fläche je Modul.
+     * Übergabepunkt für andere Module (z.B. InverterHub): PVF_GetModuleArea($id).
+     */
+    public function GetModuleArea(): float
+    {
+        return $this->totalModuleArea();
+    }
+
+    private function totalModuleArea(): float
+    {
+        $sum = 0.0;
+        foreach ($this->pvGenerators() as $g) {
+            $sum += $g['modules'] * $g['modulearea'];
+        }
+        return round($sum, 2);
     }
 
     /**
@@ -381,6 +404,9 @@ class PVPrognose extends IPSModule
                     'factor'   => (float)($row['Factor'] ?? 1.0),
                     // Selbstkalibrierung je Generator (fehlt = an → rückwärtskompatibel).
                     'calibrate'=> (bool)($row['Calibrate'] ?? true),
+                    // Modul-Metadaten (nur für externe Nutzung, z.B. InverterHub).
+                    'modules'  => (int)($row['Modules'] ?? 0),
+                    'modulearea'=> (float)($row['ModuleArea'] ?? 0),
                 ];
             }
         }

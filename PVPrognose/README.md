@@ -64,7 +64,18 @@ $snap = PVF_GetSnapshot(int $InstanzID, string $date); // [] wenn kein Snapshot
 
 // Sofortige Neuberechnung / Neuladen der Vorhersage
 PVF_Rebuild(int $InstanzID);
+
+// Gesamte Modulfläche (m²) über alle Generatoren = Σ Anzahl × Fläche je Modul
+// (z.B. für das Modul InverterHub). Auch als Statusvariable PVF_ModuleArea.
+$m2 = PVF_GetModuleArea(int $InstanzID);
 ```
+
+## Modul-Metadaten (für InverterHub)
+
+Je Generator lassen sich **Modulanzahl** und **Fläche je Modul (m²)** hinterlegen. Diese Angaben
+fließen **nicht** in die Ertragsprognose ein, sondern werden zur **Gesamtfläche** aufsummiert und als
+Statusvariable `PVF_ModuleArea` sowie über `PVF_GetModuleArea()` bereitgestellt – gedacht zur
+Übernahme durch das Modul **InverterHub**.
 
 Teil der **[EnergiePrognose-Suite](https://github.com/DG65/Prognose)** – zusammen mit *LoadForecast*
 und der *Energiebilanz*-Kachel.
