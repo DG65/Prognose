@@ -258,6 +258,8 @@ class PVPrognose extends IPSModule
             $out[] = [
                 'name'          => $g['name'],
                 'modules'       => $g['modules'],
+                'lengthMM'      => round($g['modulelength'], 1),
+                'widthMM'       => round($g['modulewidth'], 1),
                 'areaPerModule' => round($g['modulearea'], 3),
                 'area'          => round($g['modules'] * $g['modulearea'], 2),
             ];
@@ -423,12 +425,27 @@ class PVPrognose extends IPSModule
                     // Selbstkalibrierung je Generator (fehlt = an → rückwärtskompatibel).
                     'calibrate'=> (bool)($row['Calibrate'] ?? true),
                     // Modul-Metadaten (nur für externe Nutzung, z.B. InverterHub).
-                    'modules'  => (int)($row['Modules'] ?? 0),
-                    'modulearea'=> (float)($row['ModuleArea'] ?? 0),
+                    // Fläche je Modul aus Länge × Breite (mm → m²); Fallback: früher
+                    // direkt eingetragene Fläche (ModuleArea, ältere Beta-Konfig).
+                    'modules'    => (int)($row['Modules'] ?? 0),
+                    'modulelength'=> (float)($row['ModuleLength'] ?? 0),
+                    'modulewidth' => (float)($row['ModuleWidth'] ?? 0),
+                    'modulearea'  => $this->moduleAreaM2($row),
                 ];
             }
         }
         return $out;
+    }
+
+    /** Fläche eines Moduls in m² aus Länge × Breite (mm); Fallback ModuleArea (m²). */
+    private function moduleAreaM2(array $row): float
+    {
+        $len = (float)($row['ModuleLength'] ?? 0);
+        $wid = (float)($row['ModuleWidth'] ?? 0);
+        if ($len > 0 && $wid > 0) {
+            return ($len * $wid) / 1000000.0;
+        }
+        return (float)($row['ModuleArea'] ?? 0); // ältere Beta-Konfig
     }
 
     /** Wirksamer Korrekturfaktor: manuell × (optional) Selbstkalibrierung. */

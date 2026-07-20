@@ -75,11 +75,12 @@ $perGen = PVF_GetModuleAreas(int $InstanzID);
 
 ## Modul-Metadaten (für InverterHub)
 
-Je Generator lassen sich **Modulanzahl** und **Fläche je Modul (m²)** hinterlegen. Diese Angaben
-fließen **nicht** in die Ertragsprognose ein, sondern werden zur **Gesamtfläche** aufsummiert und als
+Je Generator lassen sich **Modulanzahl** sowie **Modullänge** und **Modulbreite (mm)** hinterlegen.
+Die Fläche je Modul wird daraus berechnet (Länge × Breite). Diese Angaben fließen **nicht** in die
+Ertragsprognose ein, sondern werden zur **Gesamtfläche** aufsummiert (Anzahl × Länge × Breite) und als
 Statusvariable `PVF_ModuleArea` sowie über `PVF_GetModuleArea()` bereitgestellt. Die Fläche **je
-Generator** liefert `PVF_GetModuleAreas()` als Liste (`name`, `modules`, `areaPerModule`, `area`) –
-gedacht zur Übernahme durch das Modul **InverterHub**.
+Generator** liefert `PVF_GetModuleAreas()` als Liste (`name`, `modules`, `lengthMM`, `widthMM`,
+`areaPerModule`, `area`) – gedacht zur Übernahme durch das Modul **InverterHub**.
 
 Teil der **[EnergiePrognose-Suite](https://github.com/DG65/Prognose)** – zusammen mit *LoadForecast*
 und der *Energiebilanz*-Kachel.
