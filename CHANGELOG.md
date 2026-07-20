@@ -13,7 +13,7 @@ Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in 
 - **PV-Prognose: Modul-Metadaten je Generator** – neue Spalten **Modulanzahl** und **Fläche je Modul
   (m²)**. Sie fließen nicht in die Ertragsprognose ein, sondern ergeben die **Gesamtfläche**
   (Statusvariable `PVF_ModuleArea`) zur Übernahme durch das Modul **InverterHub**. Abruf per
-  `PVF_GetModuleArea($id)`.
+  `PVF_GetModuleArea($id)` (Gesamt) bzw. `PVF_GetModuleAreas($id)` (Fläche je Generator als Liste).
 - **PV-Prognose: Selbstkalibrierung je Generator schaltbar** (neue Spalte „Kalibrieren" in der
   Generatorliste). Für **abgeregelte** Generatoren – z. B. DC-MPPT-Laderegler mit Strom- oder
   Spannungslimit bzw. Batterie-voll-Abregelung – die Kalibrierung ausschalten: Sie liefern dann das

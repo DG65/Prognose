@@ -247,6 +247,24 @@ class PVPrognose extends IPSModule
         return $this->totalModuleArea();
     }
 
+    /**
+     * Modulfläche je Generator als Liste [{name, modules, areaPerModule, area}].
+     * Übergabepunkt für InverterHub: PVF_GetModuleAreas($id).
+     */
+    public function GetModuleAreas(): array
+    {
+        $out = [];
+        foreach ($this->pvGenerators() as $g) {
+            $out[] = [
+                'name'          => $g['name'],
+                'modules'       => $g['modules'],
+                'areaPerModule' => round($g['modulearea'], 3),
+                'area'          => round($g['modules'] * $g['modulearea'], 2),
+            ];
+        }
+        return $out;
+    }
+
     private function totalModuleArea(): float
     {
         $sum = 0.0;
