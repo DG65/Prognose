@@ -6,6 +6,14 @@ Dieser Stand läuft im **Beta-Kanal** und trägt daher das Kürzel `-beta` in de
 Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in den Stable-Kanal
 übernommen.
 
+- **Lastprognose: Archiv-Warnungen behoben & nicht archivierte Variablen werden gemeldet.** Nicht
+  im Archiv geloggte Variablen (Hauptverbrauch, Abzugsliste, Temperatur, Anwesenheit, WP) lösten pro
+  Kandidatentag Warnungen aus („Logging ist für diese Variable nicht verfügbar", „Aggregation aus der
+  Zukunft"). Jetzt wird vor jedem Archivzugriff der Logging-Status geprüft (kein Zugriff/keine Warnung
+  ohne Logging) und die Endzeit nie in die Zukunft gesetzt. **Wichtig:** Eine nicht archivierte
+  **Abzugs-Variable (z. B. Wallbox) kann nicht abgezogen werden** – der Status listet solche Variablen
+  jetzt ausdrücklich auf („⚠ nicht archiviert (ignoriert): …"), damit man das Logging gezielt
+  aktivieren kann.
 - **PV-Prognose: neuer Getter `PVF_GetGenerators($id)`** – stabile Schnittstelle für andere Module
   (v. a. den InverterHub-Monitor): liefert Performance-Ratio, Gesamt-kWp und je Generator
   `name`, `kwp`, `tilt`, `azimuth`, `factor`, `area`. Damit lässt sich aus einer gemessenen

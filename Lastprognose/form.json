@@ -134,7 +134,7 @@
                 {
                     "type": "List",
                     "name": "ExcludeVars",
-                    "caption": "Wärmepumpe, Wallbox … (Leistung, Einheit wie oben) werden slotweise abgezogen",
+                    "caption": "Wärmepumpe, Wallbox … (Leistung, Einheit wie oben) werden slotweise abgezogen. WICHTIG: Diese Variablen müssen archiviert sein — sonst können sie nicht abgezogen werden (Hinweis erscheint im Status).",
                     "add": true,
                     "delete": true,
                     "columns": [

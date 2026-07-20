@@ -55,6 +55,8 @@ class Lastprognose extends IPSModule
     private $fcTempCache = null;
     // Request-lokaler Cache der automatisch erkannten Einheiten je Variable
     private $unitCache = [];
+    // Request-lokaler Cache des Archiv-Logging-Status je Variable
+    private $loggedCache = [];
 
     // ----------------------------------------------------------------
     //  Modul-Lebenszyklus
@@ -206,12 +208,19 @@ class Lastprognose extends IPSModule
             }
 
             $this->SetValue('LFC_LastUpdate', time());
-            $this->SetValue('LFC_Status', sprintf(
+            $status = sprintf(
                 'OK | heute %.1f / morgen %.1f / übermorgen %.1f kWh',
                 $this->GetValue('LFC_kWhToday'),
                 $this->GetValue('LFC_kWhTomorrow'),
                 $this->GetValue('LFC_kWhDayAfter')
-            ));
+            );
+            // Nicht archivierte Variablen melden (werden ignoriert / nicht abgezogen).
+            $missing = $this->unloggedVars();
+            if (count($missing) > 0) {
+                $status .= ' | ⚠ nicht archiviert (ignoriert): ' . implode(', ', $missing);
+                $this->log(LFC_LOG_BASIC, 'Nicht archivierte Variablen: ' . implode(', ', $missing));
+            }
+            $this->SetValue('LFC_Status', $status);
             $this->SetStatus(102);
             $this->log(LFC_LOG_BASIC, 'Neuberechnung abgeschlossen');
 
@@ -562,11 +571,11 @@ class Lastprognose extends IPSModule
     {
         if ($varID <= 0 || !IPS_VariableExists($varID)) { return null; }
         $aid = $this->getArchiveID();
-        if ($aid === 0) { return null; }
+        if ($aid === 0 || !$this->isLogged($aid, $varID)) { return null; }
 
         $slots = $this->slots();
         $start = strtotime('today', $ts);
-        $end   = $start + 86400 - 1;
+        $end   = $this->clampEnd($start + 86400 - 1);
 
         if ($this->slotMinutes() === 60) {
             $profile = array_fill(0, $slots, null);
@@ -670,10 +679,10 @@ class Lastprognose extends IPSModule
     {
         if ($varID <= 0 || !IPS_VariableExists($varID)) { return null; }
         $aid = $this->getArchiveID();
-        if ($aid === 0) { return null; }
+        if ($aid === 0 || !$this->isLogged($aid, $varID)) { return null; }
 
         $start = strtotime('today', $ts);
-        $end   = $start + 86400 - 1;
+        $end   = $this->clampEnd($start + 86400 - 1);
 
         $rows = AC_GetAggregatedValues($aid, $varID, 1 /* täglich */, $start, $end, 0);
         if (!is_array($rows) || count($rows) === 0) { return null; }
@@ -684,6 +693,57 @@ class Lastprognose extends IPSModule
     {
         $ids = IPS_GetInstanceListByModuleID(LFC_ARCHIVE_GUID);
         return (count($ids) > 0) ? $ids[0] : 0;
+    }
+
+    /**
+     * Ist die Variable im Archiv geloggt? Verhindert Archiv-Warnungen
+     * ("Logging nicht verfügbar") bei nicht archivierten Variablen. Cache
+     * je Request. Ohne Logging liefern die Leser sauber null.
+     */
+    private function isLogged(int $aid, int $vid): bool
+    {
+        if ($aid <= 0 || $vid <= 0 || !IPS_VariableExists($vid)) { return false; }
+        if (!isset($this->loggedCache[$vid])) {
+            $this->loggedCache[$vid] = (bool)@AC_GetLoggingStatus($aid, $vid);
+        }
+        return $this->loggedCache[$vid];
+    }
+
+    /** Endzeit nie in die Zukunft (verhindert "Aggregation aus der Zukunft"). */
+    private function clampEnd(int $end): int
+    {
+        return min($end, time());
+    }
+
+    /**
+     * Namen aller konfigurierten, aber NICHT archivierten Variablen — für eine
+     * klare Statusmeldung. Nicht archivierte Abzugs-Variablen können nicht
+     * abgezogen werden, Historien-Variablen fließen nicht in die Prognose ein.
+     */
+    private function unloggedVars(): array
+    {
+        $aid = $this->getArchiveID();
+        if ($aid === 0) { return ['(kein Archive Control gefunden)']; }
+
+        $missing = [];
+        $check = function (int $vid) use ($aid, &$missing) {
+            if ($vid > 0 && IPS_VariableExists($vid) && !$this->isLogged($aid, $vid)) {
+                $missing[] = IPS_GetName($vid);
+            }
+        };
+
+        $check($this->ReadPropertyInteger('VAR_Consumption'));
+        $check($this->ReadPropertyInteger('VAR_TempHistory'));
+        $check($this->ReadPropertyInteger('VAR_Presence'));
+        foreach ((array)json_decode($this->ReadPropertyString('ExcludeVars'), true) as $row) {
+            $check((int)($row['VariableID'] ?? 0));
+        }
+        foreach ((array)json_decode($this->ReadPropertyString('WPDevices'), true) as $row) {
+            $check((int)($row['PowerVar'] ?? 0));
+        }
+        $check($this->ReadPropertyInteger('VAR_WP_Power'));
+
+        return array_values(array_unique($missing));
     }
 
     /** Minuten je Slot (60, 30 oder 15). */
@@ -924,8 +984,8 @@ class Lastprognose extends IPSModule
         }
 
         $aid = $this->getArchiveID();
-        if ($aid > 0) {
-            $rows = @AC_GetAggregatedValues($aid, $vid, 1 /* täglich */, strtotime('-7 days'), time(), 0);
+        if ($this->isLogged($aid, $vid)) {
+            $rows = @AC_GetAggregatedValues($aid, $vid, 1 /* täglich */, strtotime('-7 days'), $this->clampEnd(time()), 0);
             if (is_array($rows) && count($rows) > 0) {
                 $max = 0.0;
                 foreach ($rows as $r) { $max = max($max, (float)$r['Max']); }

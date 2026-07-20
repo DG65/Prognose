@@ -27,7 +27,7 @@ Die Ähnlichkeit eines Tages wird aus **Tagtyp** (Werktag/Sa/So+Feiertag), **Tag
 | Bereich | Bedeutung |
 |---|---|
 | **Hausverbrauch** | Pflicht: archivierte Leistungsvariable. Einheit W/kW automatisch oder manuell. |
-| **Abzugsliste** | Steuerbare Lasten (Wallbox, Batterie-Ladung, WP), die **vom Hausverbrauch abgezogen** werden – so lernt das Modul die planbare **Grundlast**. Preisgesteuertes Laden plant das EMS selbst. |
+| **Abzugsliste** | Steuerbare Lasten (Wallbox, Batterie-Ladung, WP), die **vom Hausverbrauch abgezogen** werden – so lernt das Modul die planbare **Grundlast**. Preisgesteuertes Laden plant das EMS selbst. **Diese Variablen müssen archiviert sein**, sonst können sie nicht abgezogen werden (der Status meldet nicht archivierte Variablen). |
 | **Wärmepumpe / Klima** | Optionale eigene Prognose je Gerät über Temperaturregression: Heizen, Kühlen oder beides (V-Kurve, z. B. Luft-Luft-WP). |
 | **Anwesenheit** | Bool/0..1 (z. B. Geofencing). Bei einer *Abwesenheits*-Variable die Logik invertieren. |
 | **Temperaturvorhersage** | Auto (OpenWeatherData-Instanz), eigene Tagesmittel-Variablen, Ident-Muster oder – ohne Quelle – saisonales Normal aus dem Archiv. |
