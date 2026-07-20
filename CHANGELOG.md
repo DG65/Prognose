@@ -6,6 +6,11 @@ Dieser Stand läuft im **Beta-Kanal** und trägt daher das Kürzel `-beta` in de
 Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in den Stable-Kanal
 übernommen.
 
+- **PV-Prognose: neuer Getter `PVF_GetGenerators($id)`** – stabile Schnittstelle für andere Module
+  (v. a. den InverterHub-Monitor): liefert Performance-Ratio, Gesamt-kWp und je Generator
+  `name`, `kwp`, `tilt`, `azimuth`, `factor`, `area`. Damit lässt sich aus einer gemessenen
+  Einstrahlung (W/m²) die erwartete Leistung berechnen (P = kWp × E/1000 × PR × Faktor), ohne auf
+  interne Property-Namen zuzugreifen.
 - **README je Modul** (Lastprognose, PV-Prognose, Energiebilanz): Funktionsweise, Voraussetzungen,
   Einrichtung, Statusvariablen, Prognosegüte und öffentliche Funktionen – für die Darstellung im
   Module Store und auf GitHub.

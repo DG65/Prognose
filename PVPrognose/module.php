@@ -277,6 +277,36 @@ class PVPrognose extends IPSModule
     }
 
     /**
+     * Stabile Schnittstelle für andere Module (z.B. InverterHub-Monitor):
+     * Performance-Ratio und je Generator die Parameter, mit denen sich aus einer
+     * gemessenen Einstrahlung (W/m²) die erwartete Leistung berechnen lässt
+     * (P = kWp × E/1000 × PR × Faktor). Aufruf: PVF_GetGenerators($id).
+     * Rückgabe: ['pr' => float, 'totalKwp' => float, 'generators' => [
+     *   ['name','kwp','tilt','azimuth','factor','area'], … ]].
+     */
+    public function GetGenerators(): array
+    {
+        $gens = [];
+        $totalKwp = 0.0;
+        foreach ($this->pvGenerators() as $g) {
+            $gens[] = [
+                'name'    => $g['name'],
+                'kwp'     => round($g['kwp'], 3),
+                'tilt'    => round($g['tilt'], 1),
+                'azimuth' => round($g['az'], 1),
+                'factor'  => round($g['factor'] > 0 ? $g['factor'] : 1.0, 4),
+                'area'    => round($g['modules'] * $g['modulearea'], 2),
+            ];
+            $totalKwp += $g['kwp'];
+        }
+        return [
+            'pr'        => round($this->ReadPropertyFloat('PVF_PR'), 4),
+            'totalKwp'  => round($totalKwp, 3),
+            'generators'=> $gens,
+        ];
+    }
+
+    /**
      * Gespeicherte PV-Prognose (Soll) eines vergangenen Tages ('Y-m-d').
      * Rückgabe [] wenn kein Snapshot vorhanden.
      */
