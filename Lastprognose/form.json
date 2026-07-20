@@ -31,7 +31,7 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Temperaturvorhersage: Auto findet eine OpenWeatherData-Instanz (demel42) selbst — dort muss die Stundenvorhersage aktiviert sein (hourly_forecast_count > 0). Alternativ Tagesmittel-Variablen oder Ident-Muster für andere Wettermodule. Ohne Quelle: saisonales Normal aus dem Archiv (Klimatologie). Wichtig: es zählt das TAGESMITTEL."
+                    "caption": "Temperaturvorhersage: Auto findet eine OpenWeatherData-Instanz (demel42) selbst — dort muss die Stundenvorhersage aktiviert sein (hourly_forecast_count > 0). Bei mehreren OWM-Instanzen die gewünschte im Panel explizit wählen (sonst wird die erste genommen). Alternativ Tagesmittel-Variablen oder Ident-Muster für andere Wettermodule. Ohne Quelle: saisonales Normal aus dem Archiv (Klimatologie). Wichtig: es zählt das TAGESMITTEL."
                 },
                 {
                     "type": "Label",
@@ -201,6 +201,15 @@
                 {
                     "type": "Label",
                     "caption": "Auto: findet eine OpenWeatherData-Instanz (demel42) automatisch. Voraussetzung: dort die Stundenvorhersage aktivieren (hourly_forecast_count > 0, z.B. 40). Ohne OWM/ohne Vorhersage wird das saisonale Normal aus dem Temperatur-Archiv genutzt."
+                },
+                {
+                    "type": "SelectInstance",
+                    "name": "LFC_OwmInstance",
+                    "caption": "OpenWeatherData-Instanz (Auto) — leer = erste automatisch"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Nur nötig, wenn mehrere OpenWeatherData-Instanzen existieren: hier die für die Prognose relevante wählen. Leer/nicht gesetzt → automatisch die erste. Eine hier gewählte Instanz, die keine OpenWeatherData-Instanz ist, wird ignoriert."
                 },
                 {
                     "type": "Label",

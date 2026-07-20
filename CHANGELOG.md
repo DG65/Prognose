@@ -6,6 +6,10 @@ Dieser Stand läuft im **Beta-Kanal** und trägt daher das Kürzel `-beta` in de
 Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in den Stable-Kanal
 übernommen.
 
+- **Lastprognose: OpenWeatherData-Instanz wählbar (Auto-Modus).** Bei mehreren
+  OpenWeatherData-Instanzen lässt sich im Panel „Temperaturvorhersage" die relevante explizit
+  auswählen. Leer/nicht gesetzt → wie bisher automatisch die erste; eine gewählte Instanz, die keine
+  OpenWeatherData-Instanz ist, wird ignoriert (Fallback auf die erste).
 - **Lastprognose: Archiv-Warnungen behoben & nicht archivierte Variablen werden gemeldet.** Nicht
   im Archiv geloggte Variablen (Hauptverbrauch, Abzugsliste, Temperatur, Anwesenheit, WP) lösten pro
   Kandidatentag Warnungen aus („Logging ist für diese Variable nicht verfügbar", „Aggregation aus der

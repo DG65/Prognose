@@ -90,6 +90,8 @@ class Lastprognose extends IPSModule
         //   0 = Tagesmittel-Variablen (portabel, keine Abhängigkeit)
         //   1 = Slot-Aggregation über Ident-Muster (z.B. OWM/DWD)
         $this->RegisterPropertyInteger('LFC_TempFcMode',     0);
+        // Auto-Modus: konkrete OpenWeatherData-Instanz (0 = erste automatisch).
+        $this->RegisterPropertyInteger('LFC_OwmInstance',    0);
 
         // Modus 0: je eine Tagesmittel-Variable.
         $this->RegisterPropertyInteger('VAR_TempFc_D0',      0);
@@ -888,9 +890,18 @@ class Lastprognose extends IPSModule
         return $out;
     }
 
-    /** Erste OpenWeatherData-Instanz im System (0 = keine vorhanden). */
+    /**
+     * OpenWeatherData-Instanz für die Auto-Vorhersage. Wenn explizit gewählt
+     * (LFC_OwmInstance) und gültig, diese; sonst die erste gefundene.
+     * 0 = keine vorhanden.
+     */
     private function owmInstance()
     {
+        $sel = $this->ReadPropertyInteger('LFC_OwmInstance');
+        if ($sel > 0 && IPS_InstanceExists($sel)
+            && (IPS_GetInstance($sel)['ModuleInfo']['ModuleID'] ?? '') === LFC_OWM_GUID) {
+            return $sel;
+        }
         $ids = IPS_GetInstanceListByModuleID(LFC_OWM_GUID);
         return (is_array($ids) && count($ids) > 0) ? $ids[0] : 0;
     }
