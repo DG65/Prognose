@@ -193,3 +193,20 @@ Schriftgröße; Standard ist theme-konform.
 > nicht-kommerzielle** Nutzung kostenlos; für kommerzielle Nutzung ist eine Highcharts-Lizenz nötig
 > (siehe [highcharts.com/license](https://www.highcharts.com/license)). Im WebFront muss der Browser
 > das CDN erreichen können.
+
+## Verwandte Projekte
+
+**[DG65/InverterHub](https://github.com/DG65/InverterHub)** — Modbus-TCP-Anbindung für Wechselrichter.
+Der dortige `InverterHubMonitor` berechnet aus einem Einstrahlungssensor und den hier hinterlegten
+Generatorparametern Erwartungswerte und stellt sie dem gemessenen Ertrag gegenüber
+(Verschmutzungs-/Defekterkennung).
+
+Dafür nutzt er die öffentliche API der PV-Prognose:
+
+| Funktion | Liefert |
+|---|---|
+| `PVF_GetGenerators($id)` | Performance-Ratio, Gesamt-kWp und je Generator `name`, `kwp`, `tilt`, `azimuth`, `factor`, `area` |
+| `PVF_GetModuleArea($id)` | Gesamte Modulfläche (m²), auch als Statusvariable `PVF_ModuleArea` |
+
+Diese `PVF_Get*`-Funktionen gelten als **stabiler Vertrag** zwischen beiden Repos: Änderungen an
+Signatur oder Rückgabestruktur werden vorher abgestimmt. Details siehe [CLAUDE.md](CLAUDE.md).
