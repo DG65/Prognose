@@ -312,6 +312,20 @@
                     "maximum": 40
                 },
                 {
+                    "type": "Select",
+                    "name": "LFC_ResidualMode",
+                    "caption": "Unsicherheitsband (P10/P90) bilden aus",
+                    "options": [
+                        { "caption": "Streuung der ähnlichen Tage (Standard)", "value": 0 },
+                        { "caption": "Tatsächlichen Prognosefehlern — nur Band", "value": 1 },
+                        { "caption": "Tatsächlichen Prognosefehlern — Band + Pegelkorrektur", "value": 2 }
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "caption": "Standard: das Band kommt aus der Streuung der ähnlichen Tage — es ist dadurch oft deutlich breiter als der reale Prognosefehler. Die beiden anderen Modi bilden das Band aus den gemessenen Abweichungen der letzten Tage (Snapshot gegen Ist), P90 heißt dann tatsächlich „in 90 % der Fälle darunter\". Modus „nur Band\" lässt Prognosewert und kWh unverändert; „Band + Pegelkorrektur\" zieht zusätzlich einen systematischen Fehler (Bias) nach. Greift erst ab 3 auswertbaren Tagen — vorher bleibt der Standard aktiv. Die aktuellen Faktoren stehen in der Variable „Prognosegüte\"."
+                },
+                {
                     "type": "NumberSpinner",
                     "name": "LFC_Latitude",
                     "caption": "Breitengrad (für Tageslänge)",

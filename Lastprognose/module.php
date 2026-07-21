@@ -145,6 +145,11 @@ class Lastprognose extends IPSModule
         // ── Timer ───────────────────────────────────────────────────
         // Tages-Snapshots der Prognose (für spätere Soll-vs-Ist-Kontrolle je Tag)
         $this->RegisterAttributeString('LFC_Snapshots', '');
+        // Empirische Quantile der Prognosefehler (Ist/Soll) für Band/Korrektur.
+        $this->RegisterAttributeString('LFC_Residuals', '');
+        // 0 = aus (Band aus k-NN-Nachbarn), 1 = Band aus Residuen,
+        // 2 = Band + Bias-Korrektur aus Residuen.
+        $this->RegisterPropertyInteger('LFC_ResidualMode', 0);
 
         $this->RegisterTimer('LFC_RebuildTimer', 0, 'LFC_Rebuild($_IPS[\'TARGET\']);');
     }
@@ -295,6 +300,9 @@ class Lastprognose extends IPSModule
             $p90[$s]  = $this->weightedPercentile($pairs, 0.90);
         }
 
+        // Band (und optional Pegel) aus den gemessenen Prognosefehlern ableiten.
+        list($p10, $p50, $p90, $mean) = $this->applyResiduals($p10, $p50, $p90, $mean);
+
         // Ø-Leistung (W) je Slot → Energie mit Slot-Dauer in Stunden.
         $kwh = array_sum($mean) * $this->slotHours() / 1000.0;
 
@@ -338,8 +346,12 @@ class Lastprognose extends IPSModule
         $snaps = json_decode($this->ReadAttributeString('LFC_Snapshots'), true);
         if (!is_array($snaps)) { $snaps = []; }
 
-        $errs = [];
-        for ($d = 1; $d <= 7; $d++) {
+        $slots  = $this->slots();
+        $errs   = [];   // Tages-kWh-Fehler (%) → Bias/MAPE
+        $ratios = [];   // Slot-Verhältnisse Ist/Soll → Residuen-Quantile
+        $rDays  = 0;
+
+        for ($d = 1; $d <= 14; $d++) {
             $ts   = strtotime('today -' . $d . ' days');
             $date = date('Y-m-d', $ts);
             if (!isset($snaps[$date])) { continue; }
@@ -350,7 +362,24 @@ class Lastprognose extends IPSModule
             $ist = array_sum($prof) * $this->slotHours() / 1000.0;
             if ($ist < 0.5) { continue; }
             $errs[] = ($soll - $ist) / $ist * 100.0;
+
+            // Slot-Residuen nur bei gleicher Auflösung (Snapshot vs. heute).
+            $sp = $snaps[$date]['p50'] ?? null;
+            if (!is_array($sp) || count($sp) !== $slots || count($prof) !== $slots) { continue; }
+            $maxS = max($sp);
+            if ($maxS <= 0) { continue; }
+            $floor = max(10.0, 0.02 * $maxS); // Mini-Nenner ausschließen (Nacht/0-Werte)
+            $used  = 0;
+            for ($i = 0; $i < $slots; $i++) {
+                $s = (float)$sp[$i];
+                if ($s < $floor) { continue; }
+                $ratios[] = ((float)$prof[$i]) / $s;
+                $used++;
+            }
+            if ($used > 0) { $rDays++; }
         }
+
+        $this->storeResiduals($ratios, $rDays);
 
         if (count($errs) === 0) {
             $this->SetValue('LFC_Accuracy', 'Noch keine auswertbaren Tage (Snapshots sammeln sich seit v0.14)');
@@ -359,8 +388,84 @@ class Lastprognose extends IPSModule
         $bias = array_sum($errs) / count($errs);
         $mape = array_sum(array_map('abs', $errs)) / count($errs);
         $this->SetValue('LFC_ErrorMAPE', round($mape, 1));
-        $this->SetValue('LFC_Accuracy', sprintf('%d Tage: Bias %+.1f %% · |Ø-Fehler| %.1f %%', count($errs), $bias, $mape));
+        $txt = sprintf('%d Tage: Bias %+.1f %% · |Ø-Fehler| %.1f %%', count($errs), $bias, $mape);
+        $res = json_decode($this->ReadAttributeString('LFC_Residuals'), true);
+        if (is_array($res) && isset($res['q10'])) {
+            $txt .= sprintf(' | Residuen ×%.2f…×%.2f (Median ×%.2f, %d Tage)',
+                $res['q10'], $res['q90'], $res['q50'], $res['days']);
+        }
+        $this->SetValue('LFC_Accuracy', $txt);
         $this->log(LFC_LOG_BASIC, sprintf('Prognosegüte (%d Tage): Bias %+.1f %%, MAPE %.1f %%', count($errs), $bias, $mape));
+    }
+
+    /**
+     * Empirische Quantile der Prognosefehler (Ist/Soll je Slot) ablegen.
+     * Braucht eine Mindestbasis, sonst wird nichts gespeichert (→ k-NN-Band bleibt).
+     */
+    private function storeResiduals(array $ratios, int $days)
+    {
+        if ($days < 3 || count($ratios) < 50) {
+            $this->WriteAttributeString('LFC_Residuals', '');
+            return;
+        }
+        sort($ratios);
+        $q10 = $this->clampFactor($this->percentileOf($ratios, 0.10));
+        $q50 = $this->clampFactor($this->percentileOf($ratios, 0.50));
+        $q90 = $this->clampFactor($this->percentileOf($ratios, 0.90));
+        $this->WriteAttributeString('LFC_Residuals', json_encode([
+            'q10' => round($q10, 3), 'q50' => round($q50, 3), 'q90' => round($q90, 3),
+            'days' => $days, 'samples' => count($ratios), 'updated' => time(),
+        ]));
+    }
+
+    /** Perzentil aus einer aufsteigend sortierten Liste. */
+    private function percentileOf(array $sorted, float $p): float
+    {
+        $n = count($sorted);
+        if ($n === 0) { return 1.0; }
+        $idx = (int)floor($p * ($n - 1));
+        return (float)$sorted[max(0, min($n - 1, $idx))];
+    }
+
+    /** Korrekturfaktoren in einen plausiblen Bereich zwingen. */
+    private function clampFactor(float $f): float
+    {
+        return max(0.3, min(3.0, $f));
+    }
+
+    /**
+     * Band (und optional Bias) aus den gemessenen Prognosefehlern statt aus der
+     * Streuung der k-NN-Nachbarn. Modus 1 lässt p50/kWh unverändert und legt nur
+     * das Band (auf den Median normiert) darum; Modus 2 korrigiert zusätzlich
+     * den Pegel. Ohne ausreichende Datenbasis bleibt alles unverändert.
+     */
+    private function applyResiduals(array $p10, array $p50, array $p90, array $mean): array
+    {
+        $mode = $this->ReadPropertyInteger('LFC_ResidualMode');
+        if ($mode === 0) { return [$p10, $p50, $p90, $mean]; }
+
+        $r = json_decode($this->ReadAttributeString('LFC_Residuals'), true);
+        if (!is_array($r) || !isset($r['q10'], $r['q50'], $r['q90'])) {
+            return [$p10, $p50, $p90, $mean];
+        }
+        $q10 = (float)$r['q10']; $q50 = (float)$r['q50']; $q90 = (float)$r['q90'];
+        if ($q50 <= 0) { return [$p10, $p50, $p90, $mean]; }
+
+        $nP10 = []; $nP50 = []; $nP90 = []; $nMean = $mean;
+        if ($mode === 1) {
+            // Nur Streuung: Band auf den Median normiert → p50/kWh bleiben.
+            $lo = $q10 / $q50; $hi = $q90 / $q50;
+            foreach ($p50 as $i => $v) { $nP10[$i] = $v * $lo; $nP90[$i] = $v * $hi; }
+            return [$nP10, $p50, $nP90, $mean];
+        }
+        // Modus 2: vollständige Kalibrierung (Pegel + Band).
+        foreach ($p50 as $i => $v) {
+            $nP10[$i] = $v * $q10;
+            $nP50[$i] = $v * $q50;
+            $nP90[$i] = $v * $q90;
+        }
+        foreach ($mean as $i => $v) { $nMean[$i] = $v * $q50; }
+        return [$nP10, $nP50, $nP90, $nMean];
     }
 
     /**

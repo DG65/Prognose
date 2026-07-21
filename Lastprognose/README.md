@@ -45,6 +45,22 @@ Die Ähnlichkeit eines Tages wird aus **Tagtyp** (Werktag/Sa/So+Feiertag), **Tag
 | `LFC_Accuracy` | Prognosegüte als Text: Tagesanzahl, Bias, \|Ø-Fehler\| |
 | `LFC_Status` / `LFC_LastUpdate` | Status und Zeitpunkt der letzten Berechnung |
 
+## Unsicherheitsband aus echten Prognosefehlern (optional)
+
+Standardmäßig kommt das P10/P90-Band aus der **Streuung der ähnlichen Tage** — dadurch ist es oft
+deutlich breiter als der tatsächliche Prognosefehler. Alternativ lässt sich das Band aus den
+**gemessenen Abweichungen** der letzten Tage bilden (gespeicherter Snapshot gegen Ist); dann bedeutet
+P90 wirklich „in 90 % der Fälle lag der reale Wert darunter".
+
+| Modus | Wirkung |
+|---|---|
+| **Streuung ähnlicher Tage** (Standard) | wie bisher |
+| **Nur Band** | P10/P90 aus den realen Fehlern; Prognosewert (P50) und kWh bleiben unverändert |
+| **Band + Pegelkorrektur** | zusätzlich wird ein systematischer Fehler (Bias) nachgezogen |
+
+Greift erst ab **3 auswertbaren Tagen** (und genügend Messpunkten) — vorher bleibt automatisch der
+Standard aktiv. Die wirksamen Faktoren stehen in der Variable *Prognosegüte*.
+
 ## Prognosegüte (Soll vs. Ist)
 
 Bei jeder Neuberechnung wird die frühere Day-Ahead-Prognose vergangener Tage (gespeicherte

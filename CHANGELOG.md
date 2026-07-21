@@ -6,6 +6,14 @@ Dieser Stand läuft im **Beta-Kanal** und trägt daher das Kürzel `-beta` in de
 Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in den Stable-Kanal
 übernommen.
 
+- **Lastprognose: Unsicherheitsband aus echten Prognosefehlern (optional).** Bisher kam P10/P90 aus
+  der Streuung der ähnlichen Tage und war dadurch oft deutlich breiter als der reale Fehler. Neu
+  wählbar: Band aus den **gemessenen Abweichungen** der letzten Tage (Snapshot gegen Ist) — dann
+  bedeutet P90 tatsächlich „in 90 % der Fälle darunter". Zwei Modi: **nur Band** (Prognosewert und
+  kWh bleiben unverändert) oder **Band + Pegelkorrektur** (zieht zusätzlich einen systematischen
+  Bias nach). Greift erst ab 3 auswertbaren Tagen und genügend Messpunkten, sonst bleibt der
+  Standard aktiv; Korrekturfaktoren sind auf 0,3–3,0 begrenzt. Die wirksamen Faktoren stehen in der
+  Variable „Prognosegüte". Standard bleibt unverändert (Modus „Streuung der ähnlichen Tage").
 - **Lastprognose: OpenWeatherData-Instanz wählbar (Auto-Modus).** Bei mehreren
   OpenWeatherData-Instanzen lässt sich im Panel „Temperaturvorhersage" die relevante explizit
   auswählen. Leer/nicht gesetzt → wie bisher automatisch die erste; eine gewählte Instanz, die keine
