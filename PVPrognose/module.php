@@ -34,6 +34,8 @@ class PVPrognose extends IPSModule
     private $modelCache = null;
     // Request-lokaler Cache der automatisch erkannten Einheiten je Variable
     private $unitCache = [];
+    // Request-lokaler Cache des Archiv-Logging-Status je Variable
+    private $loggedCache = [];
 
     // ----------------------------------------------------------------
     //  Lebenszyklus
@@ -85,6 +87,11 @@ class PVPrognose extends IPSModule
 
         // Tages-Snapshots der Prognose (für spätere Soll-vs-Ist-Kontrolle je Tag)
         $this->RegisterAttributeString('PVF_Snapshots', '');
+        // Empirische Quantile der Prognosefehler (Ist/Soll) für Band/Korrektur.
+        $this->RegisterAttributeString('PVF_Residuals', '');
+        // 0 = aus (Band der Quelle), 1 = Band aus Residuen,
+        // 2 = Band + Pegelkorrektur aus Residuen.
+        $this->RegisterPropertyInteger('PVF_ResidualMode', 0);
 
         $this->RegisterTimer('PVF_RebuildTimer', 0, 'PVF_Rebuild($_IPS[\'TARGET\']);');
     }
@@ -182,6 +189,10 @@ class PVPrognose extends IPSModule
         $p10 = $this->resample($h10, $slots);
         $p50 = $this->resample($h50, $slots);
         $p90 = $this->resample($h90, $slots);
+
+        // Band (und optional Pegel) aus den gemessenen Prognosefehlern ableiten.
+        list($p10, $p50, $p90) = $this->applyResiduals($p10, $p50, $p90);
+
         $kwh = array_sum($p50) * $this->slotHours() / 1000.0;
 
         return [
@@ -335,8 +346,12 @@ class PVPrognose extends IPSModule
             return;
         }
 
-        $errs = [];
-        for ($d = 1; $d <= 7; $d++) {
+        $slots  = $this->slots();
+        $errs   = [];   // Tages-kWh-Fehler (%) → Bias/MAPE
+        $ratios = [];   // Slot-Verhältnisse Ist/Soll → Residuen-Quantile
+        $rDays  = 0;
+
+        for ($d = 1; $d <= 14; $d++) {
             $ts   = strtotime('today -' . $d . ' days');
             $date = date('Y-m-d', $ts);
             if (!isset($snaps[$date])) { continue; }
@@ -349,7 +364,28 @@ class PVPrognose extends IPSModule
             }
             if (!$any || $ist < 0.5) { continue; }
             $errs[] = ($soll - $ist) / $ist * 100.0;
+
+            // Slot-Residuen nur bei gleicher Auflösung (Snapshot vs. heute).
+            $sp = $snaps[$date]['p50'] ?? null;
+            if (!is_array($sp) || count($sp) !== $slots) { continue; }
+            $prof = $this->measuredProfile($ts, $slots);
+            if ($prof === null) { continue; }
+            $maxS = max($sp);
+            if ($maxS <= 0) { continue; }
+            // Schwelle blendet Nacht/Dämmerung aus — dort ist Soll≈0 und das
+            // Verhältnis Ist/Soll wäre bedeutungslos bzw. explodiert.
+            $floor = max(10.0, 0.02 * $maxS);
+            $used  = 0;
+            for ($i = 0; $i < $slots; $i++) {
+                $s = (float)$sp[$i];
+                if ($s < $floor) { continue; }
+                $ratios[] = ((float)$prof[$i]) / $s;
+                $used++;
+            }
+            if ($used > 0) { $rDays++; }
         }
+
+        $this->storeResiduals($ratios, $rDays);
 
         if (count($errs) === 0) {
             $this->SetValue('PVF_Accuracy', 'Noch keine auswertbaren Tage (Snapshots sammeln sich seit v0.14)');
@@ -358,8 +394,80 @@ class PVPrognose extends IPSModule
         $bias = array_sum($errs) / count($errs);
         $mape = array_sum(array_map('abs', $errs)) / count($errs);
         $this->SetValue('PVF_ErrorMAPE', round($mape, 1));
-        $this->SetValue('PVF_Accuracy', sprintf('%d Tage: Bias %+.1f %% · |Ø-Fehler| %.1f %%', count($errs), $bias, $mape));
+        $txt = sprintf('%d Tage: Bias %+.1f %% · |Ø-Fehler| %.1f %%', count($errs), $bias, $mape);
+        $res = json_decode($this->ReadAttributeString('PVF_Residuals'), true);
+        if (is_array($res) && isset($res['q10'])) {
+            $txt .= sprintf(' | Residuen ×%.2f…×%.2f (Median ×%.2f, %d Tage)',
+                $res['q10'], $res['q90'], $res['q50'], $res['days']);
+        }
+        $this->SetValue('PVF_Accuracy', $txt);
         $this->log(PVF_LOG_BASIC, sprintf('Prognosegüte (%d Tage): Bias %+.1f %%, MAPE %.1f %%', count($errs), $bias, $mape));
+    }
+
+    /**
+     * Empirische Quantile der Prognosefehler (Ist/Soll je Slot) ablegen.
+     * Braucht eine Mindestbasis, sonst wird nichts gespeichert.
+     */
+    private function storeResiduals(array $ratios, int $days)
+    {
+        if ($days < 3 || count($ratios) < 50) {
+            $this->WriteAttributeString('PVF_Residuals', '');
+            return;
+        }
+        sort($ratios);
+        $q10 = $this->clampFactor($this->percentileOf($ratios, 0.10));
+        $q50 = $this->clampFactor($this->percentileOf($ratios, 0.50));
+        $q90 = $this->clampFactor($this->percentileOf($ratios, 0.90));
+        $this->WriteAttributeString('PVF_Residuals', json_encode([
+            'q10' => round($q10, 3), 'q50' => round($q50, 3), 'q90' => round($q90, 3),
+            'days' => $days, 'samples' => count($ratios), 'updated' => time(),
+        ]));
+    }
+
+    /** Perzentil aus einer aufsteigend sortierten Liste. */
+    private function percentileOf(array $sorted, float $p): float
+    {
+        $n = count($sorted);
+        if ($n === 0) { return 1.0; }
+        $idx = (int)floor($p * ($n - 1));
+        return (float)$sorted[max(0, min($n - 1, $idx))];
+    }
+
+    /** Korrekturfaktoren in einen plausiblen Bereich zwingen. */
+    private function clampFactor(float $f): float
+    {
+        return max(0.3, min(3.0, $f));
+    }
+
+    /**
+     * Band (und optional Pegel) aus den gemessenen Prognosefehlern. Besonders
+     * relevant bei Open-Meteo/Forecast.Solar, die p10=p50=p90 liefern — dort
+     * entsteht so überhaupt erst ein Unsicherheitsband.
+     */
+    private function applyResiduals(array $p10, array $p50, array $p90): array
+    {
+        $mode = $this->ReadPropertyInteger('PVF_ResidualMode');
+        if ($mode === 0) { return [$p10, $p50, $p90]; }
+
+        $r = json_decode($this->ReadAttributeString('PVF_Residuals'), true);
+        if (!is_array($r) || !isset($r['q10'], $r['q50'], $r['q90'])) {
+            return [$p10, $p50, $p90];
+        }
+        $q10 = (float)$r['q10']; $q50 = (float)$r['q50']; $q90 = (float)$r['q90'];
+        if ($q50 <= 0) { return [$p10, $p50, $p90]; }
+
+        $nP10 = []; $nP50 = []; $nP90 = [];
+        if ($mode === 1) {
+            $lo = $q10 / $q50; $hi = $q90 / $q50;
+            foreach ($p50 as $i => $v) { $nP10[$i] = $v * $lo; $nP90[$i] = $v * $hi; }
+            return [$nP10, $p50, $nP90];
+        }
+        foreach ($p50 as $i => $v) {
+            $nP10[$i] = $v * $q10;
+            $nP50[$i] = $v * $q50;
+            $nP90[$i] = $v * $q90;
+        }
+        return [$nP10, $nP50, $nP90];
     }
 
     /**
@@ -720,18 +828,79 @@ class PVPrognose extends IPSModule
     private function measuredKwh(int $varID, int $ts)
     {
         if ($varID <= 0 || !IPS_VariableExists($varID)) { return null; }
-        $ids = IPS_GetInstanceListByModuleID(PVF_ARCHIVE_GUID);
-        if (count($ids) === 0) { return null; }
-        $aid = $ids[0];
+        $aid = $this->archiveID();
+        if (!$this->isLogged($aid, $varID)) { return null; }
 
         $start = strtotime('today', $ts);
-        $end   = $start + 86400 - 1;
+        $end   = $this->clampEnd($start + 86400 - 1);
         $rows  = AC_GetAggregatedValues($aid, $varID, 0, $start, $end, 0); // stündlich
         if (!is_array($rows) || count($rows) === 0) { return null; }
         $f  = $this->varPowerFactor($varID); // Einheit → W
         $wh = 0.0;
         foreach ($rows as $r) { $wh += (float)$r['Avg'] * $f; } // Ø-W × 1 h = Wh
         return $wh / 1000.0;
+    }
+
+    /** Archive-Control-Instanz (0 = keine vorhanden). */
+    private function archiveID(): int
+    {
+        $ids = IPS_GetInstanceListByModuleID(PVF_ARCHIVE_GUID);
+        return (count($ids) > 0) ? $ids[0] : 0;
+    }
+
+    /**
+     * Ist die Variable im Archiv geloggt? Verhindert Archiv-Warnungen
+     * ("Logging nicht verfügbar") bei nicht archivierten Variablen.
+     */
+    private function isLogged(int $aid, int $vid): bool
+    {
+        if ($aid <= 0 || $vid <= 0 || !IPS_VariableExists($vid)) { return false; }
+        if (!isset($this->loggedCache[$vid])) {
+            $this->loggedCache[$vid] = (bool)@AC_GetLoggingStatus($aid, $vid);
+        }
+        return $this->loggedCache[$vid];
+    }
+
+    /** Endzeit nie in die Zukunft (verhindert "Aggregation aus der Zukunft"). */
+    private function clampEnd(int $end): int
+    {
+        return min($end, time());
+    }
+
+    /**
+     * Gemessenes PV-Slot-Profil (W je Slot) eines Tages: Summe aller
+     * Generatoren aus dem Stundenaggregat, auf $slots abgebildet.
+     * Rückgabe null ohne Archiv/Daten.
+     */
+    private function measuredProfile(int $ts, int $slots)
+    {
+        $aid = $this->archiveID();
+        if ($aid === 0) { return null; }
+
+        $start  = strtotime('today', $ts);
+        $end    = $this->clampEnd($start + 86400 - 1);
+        $hourly = array_fill(0, 24, 0.0);
+        $any    = false;
+
+        foreach ($this->pvGenerators() as $g) {
+            $vid = $g['powervar'];
+            if (!$this->isLogged($aid, $vid)) { continue; }
+            $rows = @AC_GetAggregatedValues($aid, $vid, 0 /* stündlich */, $start, $end, 0);
+            if (!is_array($rows) || count($rows) === 0) { continue; }
+            $f = $this->varPowerFactor($vid);
+            foreach ($rows as $r) {
+                $h = (int)date('G', $r['TimeStamp']);
+                if ($h >= 0 && $h < 24) { $hourly[$h] += (float)$r['Avg'] * $f; $any = true; }
+            }
+        }
+        if (!$any) { return null; }
+
+        // Stundenwerte auf das Slot-Raster abbilden (24/48/96).
+        $out = [];
+        for ($s = 0; $s < $slots; $s++) {
+            $out[$s] = $hourly[(int)floor($s * 24 / $slots)];
+        }
+        return $out;
     }
 
     /** Faktor zur Umrechnung nach W: 0=W, 1=kW, 2=automatisch je Variable. */
@@ -760,9 +929,9 @@ class PVPrognose extends IPSModule
             if ($suffix === 'w')  { return 1.0; }
             if ($suffix === 'mw') { return 1000000.0; }
         }
-        $ids = IPS_GetInstanceListByModuleID(PVF_ARCHIVE_GUID);
-        if (count($ids) > 0) {
-            $rows = @AC_GetAggregatedValues($ids[0], $vid, 1, strtotime('-7 days'), time(), 0);
+        $aid = $this->archiveID();
+        if ($this->isLogged($aid, $vid)) {
+            $rows = @AC_GetAggregatedValues($aid, $vid, 1, strtotime('-7 days'), $this->clampEnd(time()), 0);
             if (is_array($rows) && count($rows) > 0) {
                 $max = 0.0;
                 foreach ($rows as $r) { $max = max($max, (float)$r['Max']); }

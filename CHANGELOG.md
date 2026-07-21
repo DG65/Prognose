@@ -6,6 +6,16 @@ Dieser Stand läuft im **Beta-Kanal** und trägt daher das Kürzel `-beta` in de
 Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in den Stable-Kanal
 übernommen.
 
+- **PV-Prognose: Unsicherheitsband aus echten Prognosefehlern (optional).** Open-Meteo und
+  Forecast.Solar liefern nur eine Linie (`p10 = p50 = p90`) — bisher gab es dort also **gar kein**
+  Unsicherheitsband. Aus den gemessenen Abweichungen der letzten Tage entsteht jetzt erstmals ein
+  echtes Band (Modi wie bei der Lastprognose: *nur Band* oder *Band + Pegelkorrektur*). Nacht- und
+  Dämmerungsslots werden ausgeblendet, da dort die Prognose ≈ 0 ist und das Verhältnis Ist/Soll
+  bedeutungslos wäre. Benötigt die `PowerVar` je Generator und mindestens 3 auswertbare Tage.
+  Standard unverändert.
+- **PV-Prognose: Archivzugriffe abgesichert.** Wie in der Lastprognose wird vor jedem Zugriff der
+  Logging-Status geprüft und die Endzeit nie in die Zukunft gesetzt — nicht archivierte
+  `PowerVar`-Variablen erzeugen damit keine Warnungen mehr im Meldungsprotokoll.
 - **Lastprognose: Unsicherheitsband aus echten Prognosefehlern (optional).** Bisher kam P10/P90 aus
   der Streuung der ähnlichen Tage und war dadurch oft deutlich breiter als der reale Fehler. Neu
   wählbar: Band aus den **gemessenen Abweichungen** der letzten Tage (Snapshot gegen Ist) — dann

@@ -47,6 +47,24 @@ Bei Open-Meteo/Forecast.Solar ist P10 = P50 = P90 (eine Linie ohne Band).
 | `PVF_Accuracy` | Prognosegüte als Text: Tagesanzahl, Bias, \|Ø-Fehler\| |
 | `PVF_Status` / `PVF_LastUpdate` | Status und Zeitpunkt der letzten Berechnung |
 
+## Unsicherheitsband aus echten Prognosefehlern (optional)
+
+**Open-Meteo und Forecast.Solar liefern nur eine Linie** (`p10 = p50 = p90`) — also gar kein
+Unsicherheitsband. Aus den **gemessenen Abweichungen** der letzten Tage (gespeicherter Snapshot gegen
+Ist) lässt sich erstmals ein echtes Band bilden; P90 bedeutet dann „in 90 % der Fälle lag der reale
+Wert darunter".
+
+| Modus | Wirkung |
+|---|---|
+| **Band der Datenquelle** (Standard) | wie bisher (bei Open-Meteo/Forecast.Solar: kein Band) |
+| **Nur Band** | P10/P90 aus realen Fehlern; Prognosewert (P50) und kWh bleiben unverändert |
+| **Band + Pegelkorrektur** | zusätzlich wird ein systematischer Fehler (Bias) nachgezogen |
+
+Nacht- und Dämmerungsslots werden dabei ausgeblendet (dort ist die Prognose ≈ 0 und das Verhältnis
+Ist/Soll bedeutungslos). Greift erst ab **3 auswertbaren Tagen** und benötigt die `PowerVar` je
+Generator; vorher bleibt automatisch der Standard aktiv. Bei **Solcast** gibt es bereits ein natives
+Band. Die wirksamen Faktoren stehen in der Variable *Prognosegüte*.
+
 ## Prognosegüte (Soll vs. Ist)
 
 Vergleicht die frühere Day-Ahead-Prognose vergangener Tage (Snapshots) mit der gemessenen Erzeugung
