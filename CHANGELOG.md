@@ -6,6 +6,11 @@ Dieser Stand läuft im **Beta-Kanal** und trägt daher das Kürzel `-beta` in de
 Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in den Stable-Kanal
 übernommen.
 
+- **Sprachregel, zweiter Durchgang (Doku).** Auch in den READMEs ersetzt (API-Schlüssel,
+  Temperatur-Abminderung, quelloffen) und die englischen Modulnamen in der Doku auf die tatsächlichen
+  deutschen gezogen: *LoadForecast* → **Lastprognose**, *PVForecast* → **PV-Prognose**. Das war nach
+  dem Entfernen der englischen Aliase auch sachlich nötig — die Anleitung „Modul-Instanz
+  ‚LoadForecast' anlegen" hätte ins Leere geführt. Interne Verweise (Anker) nachgezogen.
 - **Sprachregel: nutzersichtbare Texte durchgängig deutsch.** Vermeidbare Anglizismen in
   Beschriftungen, Hinweisen und Log-Meldungen ersetzt (API-Key → API-Schlüssel, Temperatur-Derating →
   Temperatur-Abminderung, Open Source → quelloffen); die englischen Instanz-Aliase (`LoadForecast`,

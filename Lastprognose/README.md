@@ -1,4 +1,4 @@
-# LoadForecast (Lastprognose)
+# Lastprognose
 
 Erstellt aus deinen IP-Symcon-Archivdaten eine **1–3-Tage-Verbrauchsprognose** und liefert sie als
 JSON-Profil (P10/P50/P90 je Zeitslot) zur direkten Nutzung durch ein EMS. Prefix der Funktionen: `LFC`.
@@ -81,5 +81,5 @@ $snap = LFC_GetSnapshot(int $InstanzID, string $date); // [] wenn kein Snapshot
 LFC_Rebuild(int $InstanzID);
 ```
 
-Teil der **[EnergiePrognose-Suite](https://github.com/DG65/Prognose)** – zusammen mit *PVForecast*
+Teil der **[EnergiePrognose-Suite](https://github.com/DG65/Prognose)** – zusammen mit *PV-Prognose*
 und der *Energiebilanz*-Kachel.

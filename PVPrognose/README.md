@@ -1,4 +1,4 @@
-# PVForecast (PV-Prognose)
+# PV-Prognose
 
 **Physikbasierte PV-Erzeugungsprognose** für 1–3 Tage, je Generator (Dachfläche/MPP-Tracker), über
 eine Wetter-/Solar-API. Liefert JSON-Profile zur direkten Nutzung durch ein EMS. Prefix: `PVF`.
@@ -15,9 +15,9 @@ API die erwartete Leistung berechnet; alle Generatoren werden zur Gesamt-PV summ
 
 | Quelle | Eigenschaften |
 |---|---|
-| **Open-Meteo** (Standard) | Kostenlos, kein API-Key. Leistung = kWp × Einstrahlung/1000 × Performance-Ratio mit Temperatur-Derating. |
+| **Open-Meteo** (Standard) | Kostenlos, kein API-Schlüssel. Leistung = kWp × Einstrahlung/1000 × Performance-Ratio mit Temperatur-Abminderung. |
 | **Forecast.Solar** | Liefert Leistung direkt; Gratis-Tarif ratenbegrenzt (nicht zu häufig abrufen). |
-| **Solcast** | API-Key + Resource-ID je Generator; liefert als einzige Quelle ein echtes **P10/P90-Band**. |
+| **Solcast** | API-Schlüssel + Resource-ID je Generator; liefert als einzige Quelle ein echtes **P10/P90-Band**. |
 
 Bei Open-Meteo/Forecast.Solar ist P10 = P50 = P90 (eine Linie ohne Band).
 
@@ -100,5 +100,5 @@ Statusvariable `PVF_ModuleArea` sowie über `PVF_GetModuleArea()` bereitgestellt
 Generator** liefert `PVF_GetModuleAreas()` als Liste (`name`, `modules`, `lengthMM`, `widthMM`,
 `areaPerModule`, `area`) – gedacht zur Übernahme durch das Modul **InverterHub**.
 
-Teil der **[EnergiePrognose-Suite](https://github.com/DG65/Prognose)** – zusammen mit *LoadForecast*
+Teil der **[EnergiePrognose-Suite](https://github.com/DG65/Prognose)** – zusammen mit *Lastprognose*
 und der *Energiebilanz*-Kachel.

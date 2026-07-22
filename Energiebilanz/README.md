@@ -6,8 +6,8 @@ Netzbezug/Einspeisung. Prefix: `EFTILE`.
 
 ## Funktionsweise
 
-Die Kachel liest die Prognosevariablen von **[LoadForecast](../Lastprognose)** und
-**[PVForecast](../PVPrognose)** und zeichnet:
+Die Kachel liest die Prognosevariablen von **[Lastprognose](../Lastprognose)** und
+**[PV-Prognose](../PVPrognose)** und zeichnet:
 
 - **Prognose (Soll):** P50-Linien mit P10–P90-Unsicherheitsband
 - **Ist-Werte** (optional): Momentanwert in der Legende, Punkt auf der Jetzt-Linie, gemessener
@@ -21,7 +21,7 @@ Beim Überfahren/Antippen werden Werte und Saldo zur Uhrzeit angezeigt.
 ## Voraussetzungen
 
 - IP-Symcon ab **7.0** (HTML-Tile-Visualisierung)
-- Mindestens eine der beiden Prognose-Instanzen (LoadForecast und/oder PVForecast)
+- Mindestens eine der beiden Prognose-Instanzen (Lastprognose und/oder PV-Prognose)
 - Für Ist-Werte: je eine archivierte Leistungsvariable (Einheit W/kW automatisch erkannt)
 - Internet auf dem Anzeigegerät (die Diagramm-Bibliothek wird per CDN geladen)
 
@@ -32,7 +32,7 @@ Beim Überfahren/Antippen werden Werte und Saldo zur Uhrzeit angezeigt.
 | **Quellen** | Werden automatisch erkannt (je eine PV- und Lastprognose-Instanz); nur bei mehreren Instanzen manuell wählen. Jede Reihe per Schalter oder Legenden-Klick ausblendbar. |
 | **Ist-Werte** | Momentane Leistungsvariablen für PV und Verbrauch; optional der gemessene Tagesverlauf als Linie. |
 | **Gestern** | Vortag mit Ist-Kurve und (falls vorhanden) Snapshot-Soll. |
-| **Diagramm-Engine** | **ECharts** (Open Source, auch kommerziell kostenlos) oder **Highcharts** (nur privat/nicht-kommerziell kostenlos). |
+| **Diagramm-Engine** | **ECharts** (quelloffen, auch kommerziell kostenlos) oder **Highcharts** (nur privat/nicht-kommerziell kostenlos). |
 | **Darstellung** | Diagrammhöhe, Linienstärke, Glättung, Band-Transparenz, Gitter, Y-Achse, Farben, Schriftart/-größe. |
 
 ## Als eigenständige Webseite (IPSView / Popup)

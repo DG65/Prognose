@@ -3,13 +3,13 @@
 Energieprognose-Suite mit drei Bausteinen, die dem EMS beide Seiten der Energiebilanz
 1–3 Tage voraus liefern:
 
-- **LoadForecast** (Prefix `LFC`) — Verbrauchsprognose über ein Ähnliche-Tage-Verfahren (k-NN).
-- **PVForecast** (Prefix `PVF`) — physikbasierte PV-Erzeugungsprognose je Generator über eine
-  Wetter-/Solar-API ([Details unten](#pvforecast--pv-erzeugungsprognose)).
+- **Lastprognose** (Prefix `LFC`) — Verbrauchsprognose über ein Ähnliche-Tage-Verfahren (k-NN).
+- **PV-Prognose** (Prefix `PVF`) — physikbasierte PV-Erzeugungsprognose je Generator über eine
+  Wetter-/Solar-API ([Details unten](#pv-prognose--pv-erzeugungsprognose)).
 - **Energiebilanz** (Prefix `EFTILE`) — kombinierte Kachel, die Erzeugung und Verbrauch
   gemeinsam (oder per Schalter einzeln) zeigt.
 
-## LoadForecast — Verbrauchsprognose
+## Lastprognose — Verbrauchsprognose
 
 Erstellt aus deinen Archivdaten eine **1–3-Tage-Verbrauchsprognose** und liefert sie
 als JSON-Profil (60/30/15-min-Auflösung, P10/P50/P90) zur direkten Nutzung durch das EMS.
@@ -48,7 +48,7 @@ werden einzeln gefittet und summiert.
 > Installation **nur** über die IP-Symcon Modulverwaltung (Modul-Repository-URL),
 > nicht durch manuelles Kopieren.
 
-1. Modul-Instanz „LoadForecast" anlegen.
+1. Modul-Instanz „Lastprognose" anlegen.
 2. **Datenquellen** verbinden:
    - *Hausverbrauch (W)* — z.B. die EMS-Variable `Hausverbrauch (W)`. Muss archiviert sein!
    - *Abzuziehende Verbraucher* — optional WP / Wallbox (Leistung in W), um die Grundlast zu isolieren.
@@ -118,7 +118,7 @@ JSON-Struktur (`slots`/`resolution` je nach gewählter Auflösung, Werte in **W*
 Im EMS-Script die Prognose direkt abrufen:
 
 ```php
-$lfc = 12345; // Instanz-ID LoadForecast
+$lfc = 12345; // Instanz-ID Lastprognose
 $fc  = LFC_GetForecast($lfc, 1);   // 1 = morgen
 
 $erwartungMorgen = $fc['kwh'];      // kWh
@@ -144,7 +144,7 @@ bei großer Spreizung konservativer puffern, bei enger Spreizung optimistischer 
 
 ---
 
-## PVForecast — PV-Erzeugungsprognose
+## PV-Prognose — PV-Erzeugungsprognose
 
 PV ist überwiegend **deterministische Physik** — daher kein Ähnliche-Tage-Verfahren,
 sondern Anlagengeometrie × Einstrahlungsvorhersage:
@@ -152,10 +152,10 @@ sondern Anlagengeometrie × Einstrahlungsvorhersage:
 1. **Pro PV-Generator** (Dachfläche/MPP-Tracker): Neigung, Azimut (0=Süd, −90=Ost, +90=West),
    kWp. Alle Generatoren werden zur Gesamt-PV summiert.
 2. **Wählbare Vorhersagequelle**:
-   - **Open-Meteo** — kostenlos, ohne API-Key; liefert geneigte Einstrahlung (GTI). Leistung =
-     `kWp × GTI/1000 × Performance-Ratio` mit Temperatur-Derating. Universeller Default.
+   - **Open-Meteo** — kostenlos, ohne API-Schlüssel; liefert geneigte Einstrahlung (GTI). Leistung =
+     `kWp × GTI/1000 × Performance-Ratio` mit Temperatur-Abminderung. Universeller Default.
    - **Forecast.Solar** — liefert PV-Leistung direkt; Gratis-Tarif ratenbegrenzt.
-   - **Solcast** — API-Key nötig, dafür inkl. P10/P90.
+   - **Solcast** — API-Schlüssel nötig, dafür inkl. P10/P90.
 3. **Selbstkalibrierung** (Open-Meteo, optional): vergleicht die gemessene Erzeugung (archivierte
    Leistungsvariable je Generator) mit der aus *vergangener* Einstrahlung modellierten und lernt
    einen Korrekturfaktor — fängt Verschattung, Verschmutzung und reale Leistung. Zusätzlich ein
