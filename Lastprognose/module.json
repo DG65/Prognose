@@ -6,8 +6,7 @@
     "vendor": "DG65",
     "aliases": [
         "Last-Prognose",
-        "Verbrauchsprognose",
-        "LoadForecast"
+        "Verbrauchsprognose"
     ],
     "parentRequirements": [],
     "childRequirements": [],

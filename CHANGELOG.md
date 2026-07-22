@@ -6,6 +6,12 @@ Dieser Stand läuft im **Beta-Kanal** und trägt daher das Kürzel `-beta` in de
 Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in den Stable-Kanal
 übernommen.
 
+- **Sprachregel: nutzersichtbare Texte durchgängig deutsch.** Vermeidbare Anglizismen in
+  Beschriftungen, Hinweisen und Log-Meldungen ersetzt (API-Key → API-Schlüssel, Temperatur-Derating →
+  Temperatur-Abminderung, Open Source → quelloffen); die englischen Instanz-Aliase (`LoadForecast`,
+  `PVForecast`, `EnergyForecastTile`) entfallen zugunsten der deutschen. **Unverändert bleiben**
+  Idents, Vertragsfelder (`slots`, `resolution`, `p10`/`p50`/`p90`, `mean`, `kwh` …), Code-Bezeichner
+  sowie feststehende Fach- und Produktnamen — Umbenennen dort würde Schnittstellen brechen.
 - **PV-Prognose: Unsicherheitsband aus echten Prognosefehlern (optional).** Open-Meteo und
   Forecast.Solar liefern nur eine Linie (`p10 = p50 = p90`) — bisher gab es dort also **gar kein**
   Unsicherheitsband. Aus den gemessenen Abweichungen der letzten Tage entsteht jetzt erstmals ein

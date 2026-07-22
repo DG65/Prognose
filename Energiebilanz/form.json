@@ -27,7 +27,7 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Diagramm-Engine: ECharts (Open Source, auch kommerziell kostenlos) oder Highcharts (nur privat/nicht-kommerziell kostenlos). Beide sehen praktisch gleich aus; die Library wird per CDN geladen (Internet im Anzeigegerät nötig)."
+                    "caption": "Diagramm-Engine: ECharts (quelloffen, auch kommerziell kostenlos) oder Highcharts (nur privat/nicht-kommerziell kostenlos). Beide sehen praktisch gleich aus; die Library wird per CDN geladen (Internet im Anzeigegerät nötig)."
                 },
                 {
                     "type": "Label",
@@ -171,7 +171,7 @@
                     "caption": "Diagramm-Engine",
                     "options": [
                         {
-                            "caption": "ECharts (Open Source, auch kommerziell)",
+                            "caption": "ECharts (quelloffen, auch kommerziell)",
                             "value": "echarts"
                         },
                         {

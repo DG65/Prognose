@@ -61,6 +61,24 @@ der InverterHub-Sitzung). Deshalb:
 - **Vor dem Commit** `git fetch` / `git pull --rebase` und `git log` prüfen; Build-Nummer auf dem
   tatsächlich aktuellen Stand hochzählen.
 
+## Sprachregel: Nutzersichtbares ist Deutsch
+
+Verbund-Regel (von Dietmar angeordnet, 22.07.2026). **Deutsch** ist alles, was der Nutzer sieht:
+Formularbeschriftungen, Hinweis- und Warntexte, Fehler- und **Statusmeldungen**, **Log-Meldungen**,
+Rückgabe-Texte, Variablen- und Profilnamen, Dokumentation/README. Vermeidbare Anglizismen ersetzen
+(Dry-Run → Probelauf, Event → Ereignis, Scan → Suche, API-Key → API-Schlüssel, Open Source →
+quelloffen, Derating → Abminderung).
+
+**Ausgenommen — nicht umbenennen, das bricht Verträge:**
+
+- **Idents sind API**: `LFC_Today`, `PVF_ModuleArea`, `PVF_LastUpdate` usw. bleiben.
+- **Vertragsfelder** der `PVF_Get*`/`LFC_Get*`-Rückgaben: `slots`, `resolution`, `p10`, `p50`, `p90`,
+  `mean`, `kwh`, `area`, `lengthMM` …
+- **Code-Bezeichner**: Klassen-, Methoden-, Variablen- und Property-Namen.
+- **Feststehende Fachbegriffe und Produktnamen**: IP-Symcon-Elementtypen (`SelectVariable`, `Button`,
+  `CheckBox`), WebFront, Modbus TCP, JSON, Open-Meteo, Forecast.Solar, Solcast, ECharts, Highcharts,
+  Performance-Ratio.
+
 ## Fachliche Leitplanken
 
 - **Trennung Prognose ↔ EMS:** Die Prognose sagt die *unbeeinflussbare* Nachfrage/Erzeugung vorher.

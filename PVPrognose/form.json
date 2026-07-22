@@ -19,7 +19,7 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Quellen: Open-Meteo (Standard — kostenlos, kein API-Key; Leistung = kWp × Einstrahlung/1000 × Performance-Ratio mit Temperatur-Derating). Forecast.Solar (liefert Leistung direkt, Gratis-Tarif ratenbegrenzt). Solcast (API-Key + Resource-ID je Generator, dafür echtes P10/P90-Band)."
+                    "caption": "Quellen: Open-Meteo (Standard — kostenlos, kein API-Schlüssel; Leistung = kWp × Einstrahlung/1000 × Performance-Ratio mit Temperatur-Abminderung). Forecast.Solar (liefert Leistung direkt, Gratis-Tarif ratenbegrenzt). Solcast (API-Schlüssel + Resource-ID je Generator, dafür echtes P10/P90-Band)."
                 },
                 {
                     "type": "Label",
@@ -124,7 +124,7 @@
                             "value": 1
                         },
                         {
-                            "caption": "Solcast (API-Key nötig, P10/P90)",
+                            "caption": "Solcast (API-Schlüssel nötig, P10/P90)",
                             "value": 2
                         }
                     ]
@@ -150,7 +150,7 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Open-Meteo: Leistung = kWp × Einstrahlung/1000 × Performance-Ratio (mit Temperatur-Derating). Forecast.Solar liefert die Leistung direkt. Solcast braucht API-Key + je Generator eine Resource-ID."
+                    "caption": "Open-Meteo: Leistung = kWp × Einstrahlung/1000 × Performance-Ratio (mit Temperatur-Abminderung). Forecast.Solar liefert die Leistung direkt. Solcast braucht API-Schlüssel + je Generator eine Resource-ID."
                 },
                 {
                     "type": "RowLayout",
@@ -176,7 +176,7 @@
                 {
                     "type": "ValidationTextBox",
                     "name": "PVF_SolcastKey",
-                    "caption": "Solcast API-Key (nur bei Solcast)"
+                    "caption": "Solcast API-Schlüssel (nur bei Solcast)"
                 }
             ]
         },

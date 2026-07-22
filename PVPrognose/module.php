@@ -759,7 +759,7 @@ class PVPrognose extends IPSModule
         $key = trim($this->ReadPropertyString('PVF_SolcastKey'));
         $rid = trim($g['solcast']);
         if ($key === '' || $rid === '') {
-            $this->log(PVF_LOG_VERBOSE, 'Solcast: API-Key oder Resource-ID fehlt');
+            $this->log(PVF_LOG_VERBOSE, 'Solcast: API-Schlüssel oder Resource-ID fehlt');
             return null;
         }
         $url = sprintf('https://api.solcast.com.au/rooftop_sites/%s/forecasts?format=json&hours=72',
