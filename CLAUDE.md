@@ -79,6 +79,19 @@ quelloffen, Derating → Abminderung).
   `CheckBox`), WebFront, Modbus TCP, JSON, Open-Meteo, Forecast.Solar, Solcast, ECharts, Highcharts,
   Performance-Ratio.
 
+## Emojis (Verbund-Regel, Dietmar 23.07.2026)
+
+Emojis sind **erwünscht, wo sie Nutzen stiften** — eine frühere „keine Emojis"-Vorsichtsregel ist
+aufgehoben:
+
+- **Panel-Icon**: EIN Zeichen am Anfang einer ExpansionPanel-Überschrift (📖 🔮 ⚙️ 🎯 📊), als Ersatz
+  fürs fehlende `icon`-Feld.
+- **Status-/Aufmerksamkeitssymbol** (✅ ❌ ⚠️ 💡 ℹ️) dort, wo etwas beim Lesen Fokus braucht —
+  Statusmeldungen, Warnungen, wichtige Hinweise (z. B. „⚠ nicht archiviert (ignoriert): …").
+
+Faktenlage: Kein Symcon-Store-Review hat Emojis je beanstandet. **Beobachtungsklausel:** Sollte ein
+Stable-Review sie doch bemängeln, entscheidet der Verbund neu (Rückfall: gemeinsam emoji-frei).
+
 ## Fachliche Leitplanken
 
 - **Trennung Prognose ↔ EMS:** Die Prognose sagt die *unbeeinflussbare* Nachfrage/Erzeugung vorher.
