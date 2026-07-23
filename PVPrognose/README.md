@@ -102,3 +102,5 @@ Generator** liefert `PVF_GetModuleAreas()` als Liste (`name`, `modules`, `length
 
 Teil der **[EnergiePrognose-Suite](https://github.com/DG65/Prognose)** – zusammen mit *Lastprognose*
 und der *Energiebilanz*-Kachel.
+
+> **Teil der DG65 Energie-Suite.** Welche Modulstände zusammen getestet sind, listet das Manifest: https://github.com/DG65/EMS/blob/main/SUITE.md

@@ -28,6 +28,12 @@ define('PVF_SRC_OPENMETEO',     0);
 define('PVF_SRC_FORECASTSOLAR', 1);
 define('PVF_SRC_SOLCAST',       2);
 
+// Vertragsversionen (Verbund-Konvention, additiv). Major.Minor; Major nur bei
+// Bruch. Getrennt je Vertrags-Familie, damit ein Bruch der einen die Konsumenten
+// der anderen nicht fälschlich zur Deaktivierung zwingt.
+define('PVF_CONTRACT_FORECAST',   '1.0'); // GetForecast / GetSnapshot
+define('PVF_CONTRACT_GENERATORS', '1.0'); // GetGenerators / GetModuleAreas
+
 class PVPrognose extends IPSModule
 {
     // Request-lokales Modell: [offset => 24×{p10,p50,p90} in W]
@@ -196,6 +202,7 @@ class PVPrognose extends IPSModule
         $kwh = array_sum($p50) * $this->slotHours() / 1000.0;
 
         return [
+            'contractVersion' => PVF_CONTRACT_FORECAST,
             'date'       => date('Y-m-d', $targetTs),
             'slots'      => $slots,
             'resolution' => $this->slotMinutes() . 'min',
@@ -311,6 +318,7 @@ class PVPrognose extends IPSModule
             $totalKwp += $g['kwp'];
         }
         return [
+            'contractVersion' => PVF_CONTRACT_GENERATORS,
             'pr'        => round($this->ReadPropertyFloat('PVF_PR'), 4),
             'totalKwp'  => round($totalKwp, 3),
             'generators'=> $gens,
@@ -324,7 +332,8 @@ class PVPrognose extends IPSModule
     public function GetSnapshot(string $date)
     {
         $snaps = json_decode($this->ReadAttributeString('PVF_Snapshots'), true);
-        return (is_array($snaps) && isset($snaps[$date])) ? $snaps[$date] : [];
+        if (!is_array($snaps) || !isset($snaps[$date])) { return []; }
+        return array_merge(['contractVersion' => PVF_CONTRACT_FORECAST], $snaps[$date]);
     }
 
     /**
@@ -966,6 +975,7 @@ class PVPrognose extends IPSModule
     {
         $zeros = array_fill(0, 24, 0.0);
         return [
+            'contractVersion' => PVF_CONTRACT_FORECAST,
             'date'       => date('Y-m-d', $ts),
             'slots'      => 24,
             'resolution' => '60min',

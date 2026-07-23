@@ -210,3 +210,5 @@ Dafür nutzt er die öffentliche API der PV-Prognose:
 
 Diese `PVF_Get*`-Funktionen gelten als **stabiler Vertrag** zwischen beiden Repos: Änderungen an
 Signatur oder Rückgabestruktur werden vorher abgestimmt. Details siehe [CLAUDE.md](CLAUDE.md).
+
+> **Teil der DG65 Energie-Suite.** Welche Modulstände zusammen getestet sind, listet das Manifest: https://github.com/DG65/EMS/blob/main/SUITE.md

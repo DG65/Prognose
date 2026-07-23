@@ -18,6 +18,10 @@
 // Archive Control Modul-GUID (Kernmodul)
 define('LFC_ARCHIVE_GUID', '{43192F0B-135B-4CE7-A0A7-1475603F3060}');
 
+// Vertragsversion (Verbund-Konvention, additiv). Major.Minor; Major nur bei
+// Bruch, Kompatibilität nur innerhalb derselben Major. Fehlend = '1.0'.
+define('LFC_CONTRACT_FORECAST', '1.0'); // GetForecast / GetSnapshot
+
 // OpenWeatherData (demel42) — für den Auto-Modus der Temperaturvorhersage.
 // GUID stabil über alle Installationen; Instanz wird zur Laufzeit gesucht.
 define('LFC_OWM_GUID',      '{8072158E-53BF-482A-B925-F4FBE522CEF2}');
@@ -307,6 +311,7 @@ class Lastprognose extends IPSModule
         $kwh = array_sum($mean) * $this->slotHours() / 1000.0;
 
         return [
+            'contractVersion' => LFC_CONTRACT_FORECAST,
             'date'      => date('Y-m-d', $targetTs),
             'slots'     => $slots,
             'resolution'=> $this->slotMinutes() . 'min',
@@ -332,7 +337,8 @@ class Lastprognose extends IPSModule
     public function GetSnapshot(string $date)
     {
         $snaps = json_decode($this->ReadAttributeString('LFC_Snapshots'), true);
-        return (is_array($snaps) && isset($snaps[$date])) ? $snaps[$date] : [];
+        if (!is_array($snaps) || !isset($snaps[$date])) { return []; }
+        return array_merge(['contractVersion' => LFC_CONTRACT_FORECAST], $snaps[$date]);
     }
 
     /**
@@ -1293,6 +1299,7 @@ class Lastprognose extends IPSModule
         $slots = $this->slots();
         $zeros = array_fill(0, $slots, 0.0);
         return [
+            'contractVersion' => LFC_CONTRACT_FORECAST,
             'date'      => date('Y-m-d', $ts),
             'slots'     => $slots,
             'resolution'=> $this->slotMinutes() . 'min',

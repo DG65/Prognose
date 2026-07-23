@@ -37,6 +37,20 @@ vergleicht sie mit dem gemessenen Ertrag → Verschmutzungs-/Defekterkennung).
 | Statusvariable `PVF_ModuleArea` | Gesamtfläche (m²) | ✅ Fallback |
 | Property `PVF_PR` (via `IPS_GetConfiguration`) | Performance-Ratio | ⚠️ Alt-Fallback, siehe unten |
 
+**Vertragsversionierung** (Verbund-Konvention, additiv): Jede vertragsliefernde Funktion gibt ein Feld
+`contractVersion` (String `Major.Minor`, Start `1.0`) zurück — **Major nur bei Bruch**, Kompatibilität
+nur innerhalb derselben Major (blue'Log-Prinzip); fehlt das Feld, gilt `1.0`. Getrennt je Familie:
+
+- `PVF_CONTRACT_FORECAST` (`GetForecast`, `GetSnapshot`) und `LFC_CONTRACT_FORECAST` (`GetForecast`,
+  `GetSnapshot`) — Prognoseprofil.
+- `PVF_CONTRACT_GENERATORS` (`GetGenerators`) — Generatorparameter.
+- `GetModuleArea` liefert ein Skalar (float) und kann kein Feld tragen — Version dort über
+  `GetGenerators`. `GetModuleAreas` liefert eine flache Liste (unverändert, additive Feld-Ergänzung
+  bräche die Struktur) — Version ebenfalls über `GetGenerators`.
+
+Getrennte Familien sind Absicht: Ein Bruch von `GetForecast` darf InverterHub (nutzt `GetGenerators`)
+nicht fälschlich zur Deaktivierung zwingen.
+
 **Regeln:**
 
 1. Ändern sich **Signatur oder Rückgabestruktur** dieser Funktionen, muss die InverterHub-Seite

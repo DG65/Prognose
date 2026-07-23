@@ -11,6 +11,11 @@ Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in 
   deutschen gezogen: *LoadForecast* → **Lastprognose**, *PVForecast* → **PV-Prognose**. Das war nach
   dem Entfernen der englischen Aliase auch sachlich nötig — die Anleitung „Modul-Instanz
   ‚LoadForecast' anlegen" hätte ins Leere geführt. Interne Verweise (Anker) nachgezogen.
+- **Vertragsversionierung (Verbund-Konvention).** Die vertragsliefernden Funktionen geben jetzt
+  additiv ein Feld `contractVersion` (`Major.Minor`, Start `1.0`) zurück: `PVF_GetForecast`,
+  `PVF_GetGenerators`, `PVF_GetSnapshot`, `LFC_GetForecast`, `LFC_GetSnapshot`. Getrennt je
+  Vertrags-Familie (Prognose vs. Generatoren), damit ein Bruch der einen die Konsumenten der anderen
+  nicht betrifft. Rein additiv — bestehende Felder unverändert. README verweist aufs Suite-Manifest.
 - **Sprachregel: nutzersichtbare Texte durchgängig deutsch.** Vermeidbare Anglizismen in
   Beschriftungen, Hinweisen und Log-Meldungen ersetzt (API-Key → API-Schlüssel, Temperatur-Derating →
   Temperatur-Abminderung, Open Source → quelloffen); die englischen Instanz-Aliase (`LoadForecast`,
