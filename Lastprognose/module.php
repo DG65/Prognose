@@ -132,6 +132,7 @@ class Lastprognose extends IPSModule
         $this->RegisterPropertyInteger('VAR_WP_Power',       0);
 
         // ── Ausgabe-Variablen ───────────────────────────────────────
+        $this->ensureNrgPercentProfile();
         $this->RegisterVariableString('LFC_Today',     'Prognose heute (JSON)',     '', 10);
         $this->RegisterVariableString('LFC_Tomorrow',  'Prognose morgen (JSON)',    '', 20);
         $this->RegisterVariableString('LFC_DayAfter',  'Prognose übermorgen (JSON)','', 30);
@@ -143,7 +144,7 @@ class Lastprognose extends IPSModule
         $this->RegisterVariableFloat( 'LFC_WPkWhDayAfter','Erwartung WP/Klima übermorgen (kWh)','~Electricity', 72);
         $this->RegisterVariableString('LFC_Status',    'Status',                    '', 80);
         $this->RegisterVariableInteger('LFC_LastUpdate','Letzte Berechnung',        '~UnixTimestamp', 90);
-        $this->RegisterVariableFloat( 'LFC_ErrorMAPE', 'Prognosefehler |Ø| (%)',    '', 92);
+        $this->RegisterVariableFloat( 'LFC_ErrorMAPE', 'Prognosefehler |Ø| (%)',    'NRG.Percent', 92);
         $this->RegisterVariableString('LFC_Accuracy',  'Prognosegüte (Soll vs. Ist)','', 94);
 
         // ── Timer ───────────────────────────────────────────────────
@@ -806,6 +807,21 @@ class Lastprognose extends IPSModule
     {
         $ids = IPS_GetInstanceListByModuleID(LFC_ARCHIVE_GUID);
         return (count($ids) > 0) ? $ids[0] : 0;
+    }
+
+    /**
+     * Legt das verbund-weite, geteilte Profil NRG.Percent an, falls es noch
+     * nicht existiert (kein Eigentümer-Modul — wer zuerst startet, erzeugt
+     * es). Nur bei der Erstanlage der Variable wirksam (RegisterVariableFloat
+     * setzt das Profil nur beim ersten Anlegen, siehe IPS-Verhalten).
+     */
+    private function ensureNrgPercentProfile()
+    {
+        if (IPS_VariableProfileExists('NRG.Percent')) { return; }
+        IPS_CreateVariableProfile('NRG.Percent', VARIABLETYPE_FLOAT);
+        IPS_SetVariableProfileValues('NRG.Percent', 0, 100, 0);
+        IPS_SetVariableProfileDigits('NRG.Percent', 1);
+        IPS_SetVariableProfileText('NRG.Percent', '', ' %');
     }
 
     /**

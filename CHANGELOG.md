@@ -6,6 +6,10 @@ Dieser Stand läuft im **Beta-Kanal** und trägt daher das Kürzel `-beta` in de
 Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in den Stable-Kanal
 übernommen.
 
+- **Geteiltes Variablenprofil `NRG.Percent` (Verbund-Konvention).** `LFC_ErrorMAPE` und
+  `PVF_ErrorMAPE` (Prognosefehler in %) nutzen jetzt das verbund-weite Profil `NRG.Percent`
+  (0–100, 1 Nachkommastelle, „ %") statt gar keins. Idempotente Anlage ohne Eigentümer-Modul —
+  betrifft nur neu angelegte Instanzen, bestehende Installationen bleiben unverändert.
 - **PV-Prognose: Solcast-API-Schlüssel sicher gespeichert (Verbund-Konvention).** Das Formularfeld
   ist jetzt eine `PasswordTextBox` und dient nur der Eingabe; der wirksame Schlüssel liegt in einem
   Attribut (nicht im Formular sichtbar, nicht in Exporten/`IPS_GetConfiguration`). Nach dem

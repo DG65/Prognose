@@ -134,6 +134,27 @@ nicht im selben Call-Stack wie der ursprüngliche `ApplyChanges()`-Aufruf steckt
 gehen über `solcastKey()`: Attribut zuerst, Property nur als Fallback für den kurzen Moment vor dem
 Timer-Tick. Bestehende Installationen migrieren beim nächsten `ApplyChanges()` automatisch.
 
+## Gemeinsame Variablenprofile `NRG.*` (Verbund-Konvention, Dietmar 23./24.07.2026)
+
+Physikalische Grundgrößen bekommen EIN geteiltes Profil (`NRG.Watt`, `NRG.kWh`, `NRG.Ampere`,
+`NRG.Volt`, `NRG.Percent`, `NRG.Celsius`) statt je Modul ein eigenes — bewusst klein gehalten, siehe
+[SUITE.md](https://github.com/DG65/EMS/blob/main/SUITE.md). **Kein Eigentümer-Modul:** jedes prüft
+`IPS_VariableProfileExists(...)` und legt nur an, falls es fehlt (Muster aus GleitenderMittelwert).
+
+**Bei uns umgesetzt:** `ensureNrgPercentProfile()` (in LFC und PVF je einmal, idempotent) legt
+`NRG.Percent` an (Bereich 0–100, 1 Nachkommastelle, Suffix „ %") und wird für `LFC_ErrorMAPE` /
+`PVF_ErrorMAPE` verwendet — die hatten vorher gar kein Profil. Wirkt nur bei **neu angelegten**
+Variablen (IPS setzt das Profil-Argument von `RegisterVariableFloat` nur bei der Erstanlage);
+bestehende Installationen erhalten es nicht automatisch rückwirkend — bewusst so belassen (keine
+funktionale Auswirkung, nur Formatierung; kein Grund, in bestehende Nutzerkonfiguration einzugreifen).
+
+**Bewusst NICHT umgestellt:** Die `kWh`-Variablen (`LFC_kWhToday` etc.) bleiben beim IPS-Systemprofil
+`~Electricity` statt auf ein neues `NRG.kWh` zu wechseln. Begründung: `~Electricity` ist bereits
+verbund-*und*-IPS-weit geteilt (kein Modul-eigenes Duplikat, das Problem, das `NRG.*` lösen soll),
+gut etabliert, und ein Wechsel würde die Anzeige bei bereits laufenden Beta-Installationen ohne
+funktionalen Gewinn verändern. `Watt`/`Ampere`/`Volt`/`Celsius` kommen bei uns aktuell nirgends als
+eigenständige IPS-Variable vor (nur als `unit`-Feld in JSON-Nutzlasten) — kein Handlungsbedarf.
+
 ## Fachliche Leitplanken
 
 - **Trennung Prognose ↔ EMS:** Die Prognose sagt die *unbeeinflussbare* Nachfrage/Erzeugung vorher.
