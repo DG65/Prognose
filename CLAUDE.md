@@ -2,7 +2,10 @@
 
 ## Was hier liegt
 
-Die **EnergiePrognose-Suite** für IP-Symcon mit drei Modulen:
+Die **EnergiePrognose-Suite** für IP-Symcon mit drei Modulen. Dachmarke des Gesamtverbunds (10 Module)
+ist **NRG-Stack** (Dietmar, 23.07.2026); „DG65" bleibt Hersteller/Org. Unsere drei Module sind die
+Prognose-Schicht („Wissen") innerhalb des NRG-Stack. Nur Doku/Anzeige — Idents/Verträge/Klassennamen
+unberührt.
 
 | Ordner | Modul | Präfix | GUID |
 |---|---|---|---|

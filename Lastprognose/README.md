@@ -84,4 +84,4 @@ LFC_Rebuild(int $InstanzID);
 Teil der **[EnergiePrognose-Suite](https://github.com/DG65/Prognose)** – zusammen mit *PV-Prognose*
 und der *Energiebilanz*-Kachel.
 
-> **Teil der DG65 Energie-Suite.** Welche Modulstände zusammen getestet sind, listet das Manifest: https://github.com/DG65/EMS/blob/main/SUITE.md
+> **Teil des NRG-Stack** — dem Energie-Modulverbund von DG65 (Messen · Wissen · Entscheiden · Steuern · Zeigen). Welche Modulstände zusammen getestet sind, listet das [Manifest](https://github.com/DG65/EMS/blob/main/SUITE.md).
