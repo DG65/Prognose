@@ -171,3 +171,19 @@ eigenständige IPS-Variable vor (nur als `unit`-Feld in JSON-Nutzlasten) — kei
   Aufruf steht hinter `function_exists('EMS_GetSpecialEvents')` (Eigenständigkeitsregel!) — ohne EMS
   ist die Ereignisliste leer, Verhalten unverändert. `to=0` bedeutet „noch andauernd" → Überlappung
   bis `time()`. Kein Echtzeit-Anspruch nötig, da unsere Auswertung ohnehin rückblickend läuft.
+
+## Formular-Optik (Verbund-Standard, Dietmar 24.07.2026 — noch NICHT umgesetzt)
+
+Betrifft alle drei Formulare (Lastprognose/PVPrognose/Energiebilanz). Referenzimplementierung:
+InverterHub. Explizit **kein Sofort-Umbau** verlangt — bei nächster substanzieller Formular-Änderung
+mitziehen, nicht als eigenständige Aktion vorziehen. Reihenfolge von oben:
+
+1. **„🆕 Neu in Version X.Y"** — aufgeklappt, pro Version dismissible (Attribut speichert die zuletzt
+   bestätigte Version, erscheint bei neuer Version wieder). Keine Versionsnummer in der Caption hier.
+2. **„📖 Dokumentation & Hilfe"** — eingeklappt (bestehendes Muster bleibt); die Versionsnummer gehört
+   hierher (nicht ins Neu-Panel).
+3. Fachpanels; neue/wichtige Felder mit `🆕`-Präfix im Label markieren.
+4. Symcon-Forum-Hinweis nach den Haupteinstellungen, einmalig dismissible.
+
+Details/Wortlaut: [SUITE.md](https://github.com/DG65/EMS/blob/main/SUITE.md), Abschnitt „Einheitliche
+Formular-Optik".
