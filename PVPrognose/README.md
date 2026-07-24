@@ -71,6 +71,11 @@ Vergleicht die frühere Day-Ahead-Prognose vergangener Tage (Snapshots) mit der 
 (Summe der `PowerVar`). **Bias** + bedeutet überschätzt (z. B. Verschattung → Kalibrierung
 aktivieren), **\|Ø-Fehler\|** ist der mittlere Betrag.
 
+**Sondereffekte werden ausgeschlossen** (NRG-Stack, sobald ein EMS mit `EMS_GetSpecialEvents`
+installiert ist): Tage mit externem Regeleingriff (§14a-Dimmung, Tibber-Regelenergie,
+Direktvermarktung, EMS-Schutzabschaltung) fließen weder in Bias/\|Ø-Fehler\| noch in die
+Residuen-Quantile ein. Ohne EMS (oder ohne diese Funktion) bleibt das Verhalten unverändert.
+
 ## Öffentliche Funktionen
 
 ```php

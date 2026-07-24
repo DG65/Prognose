@@ -6,6 +6,13 @@ Dieser Stand läuft im **Beta-Kanal** und trägt daher das Kürzel `-beta` in de
 Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in den Stable-Kanal
 übernommen.
 
+- **Sondereffekt-Ausschluss aus der Lernbasis (`EMS_GetSpecialEvents`, Verbund-Vertrag 1.0).**
+  Beide Prognose-Module fragen jetzt — sofern ein NRG-Stack-EMS installiert ist — externe
+  Regeleingriffe der letzten 14 Tage ab (§14a-Dimmung, Tibber-Regelenergie, Direktvermarktung,
+  EMS-Schutzabschaltung) und schließen betroffene Tage von Prognosegüte (Bias/MAPE) **und** den
+  Residuen-Quantilen aus. Ohne diese Effekte hätte ein externer Eingriff fälschlich als
+  Prognosefehler gezählt. Standalone-fähig: ohne EMS bleibt das Verhalten unverändert
+  (`function_exists`-Guard). Ausgeschlossene Tage werden in der Statuszeile *Prognosegüte* ausgewiesen.
 - **Geteiltes Variablenprofil `NRG.Percent` (Verbund-Konvention).** `LFC_ErrorMAPE` und
   `PVF_ErrorMAPE` (Prognosefehler in %) nutzen jetzt das verbund-weite Profil `NRG.Percent`
   (0–100, 1 Nachkommastelle, „ %") statt gar keins. Idempotente Anlage ohne Eigentümer-Modul —

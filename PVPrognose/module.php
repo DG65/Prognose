@@ -391,11 +391,15 @@ class PVPrognose extends IPSModule
         $errs   = [];   // Tages-kWh-Fehler (%) → Bias/MAPE
         $ratios = [];   // Slot-Verhältnisse Ist/Soll → Residuen-Quantile
         $rDays  = 0;
+        $excluded = 0;  // Tage mit Sondereffekt (EMS_GetSpecialEvents) ausgeschlossen
+
+        $specialEvents = $this->fetchSpecialEvents(14);
 
         for ($d = 1; $d <= 14; $d++) {
             $ts   = strtotime('today -' . $d . ' days');
             $date = date('Y-m-d', $ts);
             if (!isset($snaps[$date])) { continue; }
+            if ($this->dayHasSpecialEvent($specialEvents, $ts, $ts + 86400 - 1)) { $excluded++; continue; }
             $soll = (float)($snaps[$date]['kwh'] ?? 0);
             if ($soll <= 0) { continue; }
             $ist = 0.0; $any = false;
@@ -440,6 +444,9 @@ class PVPrognose extends IPSModule
         if (is_array($res) && isset($res['q10'])) {
             $txt .= sprintf(' | Residuen ×%.2f…×%.2f (Median ×%.2f, %d Tage)',
                 $res['q10'], $res['q90'], $res['q50'], $res['days']);
+        }
+        if ($excluded > 0) {
+            $txt .= sprintf(' | %d Tag(e) mit Sondereffekt ausgeschlossen', $excluded);
         }
         $this->SetValue('PVF_Accuracy', $txt);
         $this->log(PVF_LOG_BASIC, sprintf('Prognosegüte (%d Tage): Bias %+.1f %%, MAPE %.1f %%', count($errs), $bias, $mape));
@@ -914,6 +921,33 @@ class PVPrognose extends IPSModule
         IPS_SetVariableProfileValues('NRG.Percent', 0, 100, 0);
         IPS_SetVariableProfileDigits('NRG.Percent', 1);
         IPS_SetVariableProfileText('NRG.Percent', '', ' %');
+    }
+
+    /**
+     * Sondereffekte (§14a, Tibber-Regelenergie, Vermarktung, EMS-Schutz) der
+     * letzten $lookbackDays über EMS_GetSpecialEvents (Verbund-Vertrag 1.0)
+     * abfragen. Standalone-fähig: ohne EMS bleibt die Liste leer, wirkt sich
+     * nirgends aus (kein Fehler, keine Warnung).
+     */
+    private function fetchSpecialEvents(int $lookbackDays): array
+    {
+        if (!function_exists('EMS_GetSpecialEvents')) { return []; }
+        $from = strtotime('today -' . $lookbackDays . ' days');
+        $to   = time();
+        $events = @EMS_GetSpecialEvents(0, $from, $to);
+        return is_array($events) ? $events : [];
+    }
+
+    /** Überlappt irgendein Sondereffekt-Fenster den Tag [$dayStart, $dayEnd]? */
+    private function dayHasSpecialEvent(array $events, int $dayStart, int $dayEnd): bool
+    {
+        foreach ($events as $e) {
+            $from = (int)($e['from'] ?? 0);
+            $to   = (int)($e['to'] ?? 0);
+            $effectiveTo = ($to > 0) ? $to : time(); // 0 = noch andauernd → bis jetzt
+            if ($from <= $dayEnd && $effectiveTo >= $dayStart) { return true; }
+        }
+        return false;
     }
 
     /**

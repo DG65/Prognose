@@ -68,6 +68,12 @@ Snapshots) mit dem gemessenen Ist verglichen. **Bias** zeigt systematische Über
 (+ = überschätzt), **\|Ø-Fehler\|** den mittleren Betrag. Die Werte füllen sich nach einigen Tagen
 Laufzeit.
 
+**Sondereffekte werden ausgeschlossen** (NRG-Stack, sobald ein EMS mit `EMS_GetSpecialEvents`
+installiert ist): Tage mit externem Regeleingriff (§14a-Dimmung, Tibber-Regelenergie,
+Direktvermarktung, EMS-Schutzabschaltung) fließen weder in Bias/\|Ø-Fehler\| noch in die
+Residuen-Quantile ein — sie würden sonst eine gute Prognose fälschlich als Fehler werten. Ohne EMS
+(oder ohne diese Funktion) bleibt das Verhalten unverändert.
+
 ## Öffentliche Funktionen
 
 ```php

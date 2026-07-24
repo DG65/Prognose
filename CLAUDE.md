@@ -163,3 +163,11 @@ eigenständige IPS-Variable vor (nur als `unit`-Feld in JSON-Nutzlasten) — kei
   **Grundlast** gelernt wird. Diese Variablen müssen **archiviert** sein.
 - **Abgeregelte PV-Generatoren** (DC-MPPT mit Strom-/Spannungslimit): Selbstkalibrierung je Generator
   abschalten → das Modell liefert das **Potenzial** statt der gedrosselten Messung.
+- **Sondereffekt-Ausschluss (`EMS_GetSpecialEvents`, Vertrag 1.0, final seit 24.07.2026):** In
+  `evaluateAccuracy()` (LFC + PVF) holt `fetchSpecialEvents(14)` einmal die Ereignisse der letzten
+  14 Tage (`EMS_GetSpecialEvents(0, $from, $to)`, `deviceId=0` = ganze Anlage), `dayHasSpecialEvent()`
+  schließt überlappende Tage komplett von Bias/MAPE **und** den Residuen-Quantilen aus — sonst würde
+  ein externer Eingriff (§14a, Regelenergie, Direktvermarktung) fälschlich als Prognosefehler gelernt.
+  Aufruf steht hinter `function_exists('EMS_GetSpecialEvents')` (Eigenständigkeitsregel!) — ohne EMS
+  ist die Ereignisliste leer, Verhalten unverändert. `to=0` bedeutet „noch andauernd" → Überlappung
+  bis `time()`. Kein Echtzeit-Anspruch nötig, da unsere Auswertung ohnehin rückblickend läuft.
