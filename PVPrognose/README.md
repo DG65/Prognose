@@ -17,7 +17,7 @@ API die erwartete Leistung berechnet; alle Generatoren werden zur Gesamt-PV summ
 |---|---|
 | **Open-Meteo** (Standard) | Kostenlos, kein API-Schlüssel. Leistung = kWp × Einstrahlung/1000 × Performance-Ratio mit Temperatur-Abminderung. |
 | **Forecast.Solar** | Liefert Leistung direkt; Gratis-Tarif ratenbegrenzt (nicht zu häufig abrufen). |
-| **Solcast** | API-Schlüssel + Resource-ID je Generator; liefert als einzige Quelle ein echtes **P10/P90-Band**. |
+| **Solcast** | API-Schlüssel + Resource-ID je Generator; liefert als einzige Quelle ein echtes **P10/P90-Band**. Der Schlüssel wird nach dem Speichern sicher abgelegt (nicht im Formular sichtbar, nicht in Exporten). |
 
 Bei Open-Meteo/Forecast.Solar ist P10 = P50 = P90 (eine Linie ohne Band).
 

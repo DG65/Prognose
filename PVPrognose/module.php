@@ -100,6 +100,15 @@ class PVPrognose extends IPSModule
         $this->RegisterPropertyInteger('PVF_ResidualMode', 0);
 
         $this->RegisterTimer('PVF_RebuildTimer', 0, 'PVF_Rebuild($_IPS[\'TARGET\']);');
+
+        // Solcast-API-Schlüssel: das Formularfeld (Property, PasswordTextBox)
+        // dient nur der Eingabe. Der wirksame Wert liegt in einem Attribut
+        // (nicht im Formular sichtbar, nicht in Exporten). Ein kurzer
+        // Einmal-Timer räumt das Formularfeld unmittelbar nach dem Speichern
+        // leer — asynchron, damit kein rekursiver ApplyChanges()-Aufruf
+        // innerhalb des laufenden ApplyChanges() nötig ist.
+        $this->RegisterAttributeString('PVF_SolcastSecret', '');
+        $this->RegisterTimer('PVF_ClearSolcastKeyTimer', 0, 'PVF_ClearSolcastKey($_IPS[\'TARGET\']);');
     }
 
     public function Destroy()
@@ -114,6 +123,14 @@ class PVPrognose extends IPSModule
         // Gesamte Modulfläche aus der Generatorliste (konfig-abgeleitet).
         $this->SetValue('PVF_ModuleArea', $this->totalModuleArea());
 
+        // Neu eingegebenen Solcast-Schlüssel ins Attribut übernehmen und das
+        // Formularfeld per Kurz-Timer (nicht rekursiv) wieder leeren.
+        $enteredKey = trim($this->ReadPropertyString('PVF_SolcastKey'));
+        if ($enteredKey !== '') {
+            $this->WriteAttributeString('PVF_SolcastSecret', $enteredKey);
+            $this->SetTimerInterval('PVF_ClearSolcastKeyTimer', 1);
+        }
+
         $active = $this->ReadPropertyBoolean('PVF_Active');
         $hours  = max(1, $this->ReadPropertyInteger('PVF_IntervalHours'));
 
@@ -124,6 +141,20 @@ class PVPrognose extends IPSModule
             $this->SetTimerInterval('PVF_RebuildTimer', 0);
             $this->SetStatus(104);
         }
+    }
+
+    /**
+     * Leert das Solcast-Schlüssel-Formularfeld (Property). Läuft als
+     * eigenständiger Timer-Aufruf NACH ApplyChanges(), nicht rekursiv
+     * innerhalb davon — sicherer Weg für IPS_SetProperty+IPS_ApplyChanges
+     * auf die eigene Instanz.
+     */
+    public function ClearSolcastKey()
+    {
+        $this->SetTimerInterval('PVF_ClearSolcastKeyTimer', 0);
+        if (trim($this->ReadPropertyString('PVF_SolcastKey')) === '') { return; }
+        @IPS_SetProperty($this->InstanceID, 'PVF_SolcastKey', '');
+        @IPS_ApplyChanges($this->InstanceID);
     }
 
     // ----------------------------------------------------------------
@@ -763,9 +794,21 @@ class PVPrognose extends IPSModule
     //  Quelle: Solcast (Leistung inkl. P10/P90)
     // ----------------------------------------------------------------
 
+    /**
+     * Wirksamer Solcast-API-Schlüssel: aus dem Attribut (sicherer
+     * Speicherort); Fallback auf die Property für den kurzen Moment vor
+     * dem asynchronen Leeren des Formularfelds nach dem Speichern.
+     */
+    private function solcastKey(): string
+    {
+        $secret = trim($this->ReadAttributeString('PVF_SolcastSecret'));
+        if ($secret !== '') { return $secret; }
+        return trim($this->ReadPropertyString('PVF_SolcastKey'));
+    }
+
     private function fetchSolcast(array $g)
     {
-        $key = trim($this->ReadPropertyString('PVF_SolcastKey'));
+        $key = $this->solcastKey();
         $rid = trim($g['solcast']);
         if ($key === '' || $rid === '') {
             $this->log(PVF_LOG_VERBOSE, 'Solcast: API-Schlüssel oder Resource-ID fehlt');

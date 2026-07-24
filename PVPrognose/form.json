@@ -174,9 +174,9 @@
                     ]
                 },
                 {
-                    "type": "ValidationTextBox",
+                    "type": "PasswordTextBox",
                     "name": "PVF_SolcastKey",
-                    "caption": "Solcast API-Schlüssel (nur bei Solcast)"
+                    "caption": "Solcast API-Schlüssel (nur bei Solcast) — Eingabe, wird nach dem Speichern sicher abgelegt und hier geleert"
                 }
             ]
         },

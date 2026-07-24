@@ -109,6 +109,31 @@ aufgehoben:
 Faktenlage: Kein Symcon-Store-Review hat Emojis je beanstandet. **Beobachtungsklausel:** Sollte ein
 Stable-Review sie doch bemängeln, entscheidet der Verbund neu (Rückfall: gemeinsam emoji-frei).
 
+## Zugangsdaten (Verbund-Konvention, Dietmar 23.07.2026)
+
+Für jedes Modul mit Cloud-/API-Zugang:
+
+1. **Handshake-/Token-Verfahren bevorzugen**, wenn die API es anbietet — Passwort dient nur dem
+   einmaligen Handshake und wird danach nicht gespeichert, nur das Token/Secret bleibt liegen.
+2. Passwörter/Schlüssel werden nur dauerhaft gespeichert, wenn sie **wirklich wiederholt** gebraucht
+   werden (z. B. ein statischer API-Schlüssel ohne Token-Austausch — kein Handshake-Weg verfügbar,
+   also Rückfall auf dauerhafte Speicherung erlaubt).
+3. **Speicherort: `RegisterAttributeString` (nicht Property)** — nicht im Formular sichtbar, nicht in
+   Exporten/`IPS_GetConfiguration`.
+4. Technischer Vorbehalt: IP-Symcon verschlüsselt **nicht** at rest. „Sicher" heißt „nicht im
+   Formular/Log/Anzeigetext sichtbar", nicht „verschlüsselt".
+5. **Formulareingabe:** `PasswordTextBox`, Wert nach dem Speichern **sofort geleert**.
+
+**Umsetzung bei uns (PVF_SolcastKey, Beispiel für statische API-Schlüssel ohne Handshake):** Die
+Property bleibt als reines Eingabefeld (`PasswordTextBox`). In `ApplyChanges()` wird ein neu
+eingegebener Wert sofort in ein Attribut (`PVF_SolcastSecret`) übernommen; das Leeren der Property
+passiert **nicht rekursiv innerhalb von `ApplyChanges()`**, sondern über einen Einmal-Timer
+(`SetTimerInterval(…, 1)`), der `ClearSolcastKey()` als eigenständigen Top-Level-Aufruf auslöst —
+dort ist `IPS_SetProperty()` + `IPS_ApplyChanges()` auf die eigene Instanz unproblematisch, weil er
+nicht im selben Call-Stack wie der ursprüngliche `ApplyChanges()`-Aufruf steckt. Lesende Zugriffe
+gehen über `solcastKey()`: Attribut zuerst, Property nur als Fallback für den kurzen Moment vor dem
+Timer-Tick. Bestehende Installationen migrieren beim nächsten `ApplyChanges()` automatisch.
+
 ## Fachliche Leitplanken
 
 - **Trennung Prognose ↔ EMS:** Die Prognose sagt die *unbeeinflussbare* Nachfrage/Erzeugung vorher.

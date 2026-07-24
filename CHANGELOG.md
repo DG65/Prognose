@@ -6,6 +6,11 @@ Dieser Stand läuft im **Beta-Kanal** und trägt daher das Kürzel `-beta` in de
 Funktionen werden hier gesammelt und erst nach dem Test als reguläre `0.20` in den Stable-Kanal
 übernommen.
 
+- **PV-Prognose: Solcast-API-Schlüssel sicher gespeichert (Verbund-Konvention).** Das Formularfeld
+  ist jetzt eine `PasswordTextBox` und dient nur der Eingabe; der wirksame Schlüssel liegt in einem
+  Attribut (nicht im Formular sichtbar, nicht in Exporten/`IPS_GetConfiguration`). Nach dem
+  Speichern wird das Formularfeld automatisch geleert. Bestehende Installationen migrieren beim
+  nächsten Speichern automatisch — keine manuelle Aktion nötig, der Schlüssel bleibt erhalten.
 - **Sprachregel, zweiter Durchgang (Doku).** Auch in den READMEs ersetzt (API-Schlüssel,
   Temperatur-Abminderung, quelloffen) und die englischen Modulnamen in der Doku auf die tatsächlichen
   deutschen gezogen: *LoadForecast* → **Lastprognose**, *PVForecast* → **PV-Prognose**. Das war nach
